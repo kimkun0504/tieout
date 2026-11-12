@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# local outputs and real customer files: never commit these
+out/
+data/private/
+*.local.xlsx
+examples/data/
