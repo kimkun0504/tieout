@@ -73,6 +73,10 @@ def to_payload(result: CleanResult) -> dict[str, Any]:
             if result.report_date
             else None
         ),
+        "stated_figures": [
+            {"stat": f.stat, "label": f.label, "stated": jsonable(f.raw), "cell": f.ref.to_dict()}
+            for f in result.stated
+        ],
         "ok": result.ok,
         "summary": result.summary(),
         "metrics": result.metrics(),

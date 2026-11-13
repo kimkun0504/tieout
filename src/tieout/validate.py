@@ -6,13 +6,14 @@ sum of the rows they cover.
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from datetime import date
 from decimal import Decimal
 from statistics import median
 
 from tieout.mapping import ColumnMapping
-from tieout.models import CleanRow, Issue, ReportedTotal, Severity
+from tieout.models import CleanRow, Issue, ReportedTotal, Severity, StatedFigure
 from tieout.schema import FIELDS_BY_NAME
 
 _LABELS = {
@@ -398,3 +399,115 @@ def row_amount(row: CleanRow, name: str) -> Decimal:
         return sum((ch.amount.value for ch in row.charges if ch.amount.value is not None), Decimal("0"))
     value = row.get(name)
     return Decimal(str(value)) if value is not None else Decimal("0")
+
+
+_STAT_NAMES = {
+    "total_units": "unit count",
+    "occupied_units": "occupied units",
+    "vacant_units": "vacant units",
+    "occupancy": "occupancy",
+}
+
+
+def _stated_number(raw: object) -> tuple[Decimal, int, bool] | None:
+    """(value, decimal places, had a % sign) for a stated figure, or None if it isn't one."""
+    if isinstance(raw, bool):
+        return None
+    if isinstance(raw, int):
+        return Decimal(raw), 0, False
+    if isinstance(raw, float):
+        if raw != raw or raw in (float("inf"), float("-inf")):
+            return None
+        d = Decimal(repr(raw))
+        exp = d.as_tuple().exponent
+        return d, max(0, -exp) if isinstance(exp, int) else 0, False
+    text = str(raw).strip().replace(",", "")
+    pct = text.endswith("%")
+    text = text.rstrip("%").strip()
+    if not re.fullmatch(r"-?\d+(\.\d+)?", text):
+        return None
+    d = Decimal(text)
+    places = len(text.split(".")[1]) if "." in text else 0
+    return d, places, pct
+
+
+def check_stated_figures(rows: list[CleanRow], stated: list[StatedFigure]) -> list[Issue]:
+    """Footer statistics ("Total Units 120", "Occupancy 95.0%") must agree with the units read.
+
+    A unit count that disagrees means rows were lost or invented (error). Occupancy and
+    occupied/vacant counts can differ by how a system counts notice, model or down units, so
+    those are warnings. Occupancy is compared to the precision it was printed with.
+    """
+    issues: list[Issue] = []
+    if not stated:
+        return issues
+    counts: dict[str, int] = {}
+    for r in rows:
+        s = r.get("status") or "unknown"
+        counts[s] = counts.get(s, 0) + 1
+    units = len(rows)
+    occupied = counts.get("occupied", 0) + counts.get("notice", 0)
+    actual: dict[str, int] = {"total_units": units, "occupied_units": occupied, "vacant_units": counts.get("vacant", 0)}
+
+    for f in stated:
+        parsed = _stated_number(f.raw)
+        name = _STAT_NAMES.get(f.stat, f.stat)
+        if parsed is None:
+            continue
+        value, places, pct = parsed
+        if f.stat == "occupancy":
+            if not units:
+                continue
+            percent = value if (pct or value > 1) else value * 100
+            places = places if (pct or value > 1) else max(0, places - 2)
+            computed = Decimal(occupied * 100) / Decimal(units)
+            tolerance = Decimal(5) / (Decimal(10) ** (places + 1)) + Decimal("0.0001")
+            if abs(computed - percent) <= tolerance:
+                issues.append(
+                    Issue(
+                        Severity.INFO,
+                        "stated_figure_ties",
+                        f"Stated occupancy of {percent}% agrees with the units ({occupied} of {units} occupied).",
+                        refs=[f.ref],
+                    )
+                )
+            else:
+                issues.append(
+                    Issue(
+                        Severity.WARNING,
+                        "stated_figure_differs",
+                        f"The report states occupancy of {percent}% ({f.ref.cell}), but {occupied} of {units} units "
+                        f"read as occupied ({computed.quantize(Decimal('0.1'))}%). Check unit statuses, or whether the "
+                        "report counts notice, model or down units differently.",
+                        refs=[f.ref],
+                    )
+                )
+            continue
+        if value != value.to_integral_value() or f.stat not in actual:
+            continue
+        want, got = int(value), actual[f.stat]
+        if want == got:
+            issues.append(
+                Issue(
+                    Severity.INFO,
+                    "stated_figure_ties",
+                    f"Stated {name} of {want} agrees with the units read.",
+                    refs=[f.ref],
+                )
+            )
+            continue
+        if f.stat == "total_units":
+            message = f"The report states {want} units ({f.ref.cell}), but {got} unit rows were read. " + (
+                "Some unit rows may be missing or were skipped."
+                if got < want
+                else "Some rows read as units may not be units (notes, summaries or duplicates)."
+            )
+            severity = Severity.ERROR
+        else:
+            message = (
+                f"The report states {want} {name} ({f.ref.cell}), but {got} units read as {name.split()[0]}. "
+                "Check unit statuses, or whether the report counts notice, model or down units differently."
+            )
+            severity = Severity.WARNING
+        issues.append(Issue(severity, "stated_figure_differs", message, refs=[f.ref]))
+    return issues

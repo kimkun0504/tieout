@@ -83,6 +83,9 @@ def make_stacked_header_xlsx(path: Path) -> Path:
     )
     ws.append(["Total Building B", None, 1865, None, 3550, 3500, 1350])
     ws.append(["Grand Total", None, 4145, None, 8345, 6775, 2600])
+    ws.append([])
+    ws.append(["Total Units", 5])  # footer statistics: checked, never read as units
+    ws.append(["Occupancy %", 0.8])
     wb.save(path)
     return path
 

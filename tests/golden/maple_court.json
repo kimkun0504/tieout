@@ -212,6 +212,30 @@
     {
       "acknowledgment": null,
       "cells": [
+        "B19"
+      ],
+      "field": null,
+      "id": "10f41dba8122",
+      "message": "Stated unit count of 5 agrees with the units read.",
+      "row": null,
+      "rule": "stated_figure_ties",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [
+        "B20"
+      ],
+      "field": null,
+      "id": "bbe57bbb8598",
+      "message": "Stated occupancy of 80.0% agrees with the units (4 of 5 occupied).",
+      "row": null,
+      "rule": "stated_figure_ties",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [
         "A3"
       ],
       "field": null,
@@ -1134,8 +1158,10 @@
     }
   ],
   "skipped": {
+    "blank": 1,
     "repeated_header": 1,
-    "section": 2
+    "section": 2,
+    "summary": 2
   },
   "source": {
     "file": "maple_court.xlsx",
@@ -1148,6 +1174,32 @@
       "Rent Roll"
     ]
   },
+  "stated_figures": [
+    {
+      "cell": {
+        "cell": "B19",
+        "col": 2,
+        "file": "maple_court.xlsx",
+        "row": 19,
+        "sheet": "Rent Roll"
+      },
+      "label": "Total Units",
+      "stat": "total_units",
+      "stated": 5
+    },
+    {
+      "cell": {
+        "cell": "B20",
+        "col": 2,
+        "file": "maple_court.xlsx",
+        "row": 20,
+        "sheet": "Rent Roll"
+      },
+      "label": "Occupancy %",
+      "stat": "occupancy",
+      "stated": 0.8
+    }
+  ],
   "summary": {
     "acknowledged": 0,
     "corrections": 0,

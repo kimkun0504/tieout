@@ -157,6 +157,16 @@ class ReportedTotal:
     amounts: dict[str, TracedValue]  # field -> reported amount
 
 
+@dataclass
+class StatedFigure:
+    """A statistic printed in the report's footer ("Occupied Units 95"), to check against the units."""
+
+    stat: str  # total_units | occupied_units | vacant_units | occupancy
+    label: str
+    raw: Any
+    ref: SourceRef
+
+
 def jsonable(v: Any) -> Any:
     """JSON-safe value. Money stays an exact decimal string ("1425.10"), never a float."""
     if isinstance(v, Decimal):

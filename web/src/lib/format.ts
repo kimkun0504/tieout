@@ -119,6 +119,9 @@ const RULES: Record<string, string> = {
   t12_uncategorized: "No standard category",
   rent_per_sqft_outlier: "Rent per sq ft out of line",
   move_in_after_report_date: "Move-in after report date",
+  report_date_differs: "Report date differs from file",
+  stated_figure_differs: "Footer figure disagrees",
+  stated_figure_ties: "Footer figure agrees",
   annual_monthly_mismatch: "Annual and monthly rent disagree",
   rent_charge_mismatch: "Rent differs from charge lines",
 };

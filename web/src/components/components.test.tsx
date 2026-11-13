@@ -28,6 +28,31 @@ describe("TieOutStrip", () => {
     expect(screen.getByText("ties")).toBeInTheDocument();
   });
 
+  it("shows footer figures and flags one that disagrees", () => {
+    const cell = (c: string) => ({ file: "x", sheet: "s", cell: c, row: 20, col: 2 });
+    const r = result({
+      stated_figures: [
+        { stat: "total_units", label: "Total Units", stated: 5, cell: cell("B19") },
+        { stat: "occupancy", label: "Occupancy %", stated: 0.9, cell: cell("B20") },
+      ],
+      issues: [
+        issue({ rule: "stated_figure_ties", severity: "info", row: null, field: null, cells: ["B19"], message: "ok" }),
+        issue({
+          rule: "stated_figure_differs",
+          severity: "warning",
+          row: null,
+          field: null,
+          cells: ["B20"],
+          message: "The report states occupancy of 90.0% (B20), but 4 of 5 units read as occupied (80.0%). Check.",
+        }),
+      ],
+    });
+    wrap(<TieOutStrip result={r} onSelect={() => {}} />);
+    expect(screen.getByText("90.0%")).toBeInTheDocument();
+    expect(screen.getByText("But 4 of 5 units read as occupied (80.0%)")).toBeInTheDocument();
+    expect(screen.getByText(/1 doesn't agree/)).toBeInTheDocument();
+  });
+
   it("explains when there are no totals", () => {
     wrap(<TieOutStrip result={result({ totals: [] })} onSelect={() => {}} />);
     expect(screen.getByText(/no total rows/)).toBeInTheDocument();

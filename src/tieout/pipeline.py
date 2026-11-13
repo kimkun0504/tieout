@@ -21,7 +21,7 @@ from tieout.detect import HeaderInfo, ReportDate, RowKind, classify_rows, detect
 from tieout.ingest import Grid, read_grid
 from tieout.mapping import ColumnMapping, HeaderMapper, TemplateStore, map_columns
 from tieout.metrics import compute_metrics
-from tieout.models import Charge, CleanRow, Issue, ReportedTotal, Severity, TracedValue
+from tieout.models import Charge, CleanRow, Issue, ReportedTotal, Severity, StatedFigure, TracedValue
 from tieout.normalize import is_vacant_marker, parse, tidy_name
 from tieout.review import Review
 from tieout.schema import CONCESSION_CODE_RE, FIELDS_BY_NAME, RENT_CODE_RE, FieldType
@@ -46,6 +46,7 @@ class CleanResult:
     as_of: date | None = None
     sheets: list[str] = dc_field(default_factory=list)
     report_date: ReportDate | None = None  # the date printed in the file's title rows, if any
+    stated: list[StatedFigure] = dc_field(default_factory=list)  # footer statistics ("Total Units 120")
 
     @property
     def open_issues(self) -> list[Issue]:
@@ -116,6 +117,7 @@ def clean_file(
     skipped: dict[str, int] = {}
     since_last_total: list[int] = []
     all_data: list[int] = []
+    stated: list[StatedFigure] = []
 
     for cr in classified:
         if cr.kind is RowKind.DATA:
@@ -127,6 +129,14 @@ def clean_file(
             charge = _read_charge(grid, cr.index, col_for)
             if charge is not None:
                 rows[-1].charges.append(charge)
+        elif cr.kind is RowKind.SUMMARY:
+            skipped["summary"] = skipped.get("summary", 0) + 1
+            if cr.stat and cr.stat_col is not None:
+                stated.append(
+                    StatedFigure(
+                        cr.stat, cr.label or "", grid.value(cr.index, cr.stat_col), grid.ref(cr.index, cr.stat_col)
+                    )
+                )
         elif cr.kind is RowKind.TOTAL:
             label = cr.label or "Total"
             scope = _total_scope(label, totals, since_last_total, all_data)
@@ -170,7 +180,9 @@ def clean_file(
         )
     as_of = as_of or (report_date.value if report_date else None)
 
-    issues = validate.run_all(rows, totals, mappings, as_of) + extra_issues
+    issues = (
+        validate.run_all(rows, totals, mappings, as_of) + validate.check_stated_figures(rows, stated) + extra_issues
+    )
     for issue in issues:
         issue.acknowledgment = review.ack_for(issue.id)
     return CleanResult(
@@ -186,6 +198,7 @@ def clean_file(
         as_of,
         list(grid.sheets),
         report_date,
+        stated,
     )
 
 

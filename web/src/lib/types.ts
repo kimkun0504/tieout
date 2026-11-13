@@ -151,6 +151,7 @@ export interface Result {
   source: { file: string; sheet: string; sheets: string[]; header_rows: number[] };
   as_of?: string | null;
   report_date?: { value: string; cell: SourceRef; text: string } | null;
+  stated_figures?: StatedFigure[];
   ok: boolean;
   summary: Summary;
   metrics: Metrics;
@@ -260,4 +261,11 @@ export interface CompareResult {
   t12: { file: string; last_month: string | null };
   checks: ComparisonCheck[];
   timing: { rent_roll_as_of: string; t12_last_month: string; months_apart: number; status: string } | null;
+}
+
+export interface StatedFigure {
+  stat: "total_units" | "occupied_units" | "vacant_units" | "occupancy";
+  label: string;
+  stated: Scalar;
+  cell: SourceRef;
 }

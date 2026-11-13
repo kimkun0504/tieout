@@ -31,6 +31,7 @@ class RowKind(str, Enum):
     BLANK = "blank"
     NOTE = "note"
     CHARGE = "charge"  # extra charge line belonging to the unit above
+    SUMMARY = "summary"  # a report statistic such as "Occupied Units 95" or "Occupancy 95.0%"
 
 
 @dataclass
@@ -47,6 +48,8 @@ class ClassifiedRow:
     section: str | None = None
     label: str | None = None
     notes: list[str] = dc_field(default_factory=list)
+    stat: str | None = None  # for SUMMARY rows tieout can check: total_units, occupied_units, ...
+    stat_col: int | None = None  # where the stated figure is
 
 
 def _text(v: Any) -> str:
@@ -68,6 +71,51 @@ def _is_number_like(s: str) -> bool:
 
 def _looks_like_unit_code(s: str) -> bool:
     return len(s) <= 8 and " " not in s.strip() and any(ch.isdigit() for ch in s)
+
+
+# Statistics printed in a report's footer, which tieout checks against the units it read.
+_STATS: dict[str, re.Pattern[str]] = {
+    "total_units": re.compile(
+        r"^(?:total\s+)?(?:#\s*of\s+|number\s+of\s+|no\.?\s+of\s+)?units?(?:\s+count)?$|^unit\s+count$"
+    ),
+    "occupied_units": re.compile(r"^(?:total\s+)?(?:#\s*of\s+|number\s+of\s+)?occupied(?:\s+units?)?$"),
+    "vacant_units": re.compile(r"^(?:total\s+)?(?:#\s*of\s+|number\s+of\s+)?vacant(?:\s+units?)?$"),
+    "occupancy": re.compile(
+        r"^(?:physical\s+)?occupancy(?:\s*%|\s+percent(?:age)?|\s+rate)?$|^(?:%|percent)\s+occupied$"
+    ),
+}
+# Other footer statistics: recognised so they are not read as units, but not checked.
+_SUMMARY_WORDS = re.compile(
+    r"\b(?:units|occupan\w*|occupied|vacan\w*|leased|pre-?leased|average|avg|percent|rate|summary|"
+    r"statistics|potential|loss\s+to\s+lease|on\s+notice|count)\b|%",
+    re.I,
+)
+
+
+def _stat_label(text: str) -> str:
+    return re.sub(r"\s+", " ", text.strip().rstrip(":=").strip()).lower()
+
+
+def _summary_row(filled: list[tuple[int, Any]], unit_col: int, unit_text: str) -> tuple[str | None, int] | None:
+    """(stat, value column) when this row is a report statistic rather than a unit; None otherwise.
+
+    A statistic is the row's leftmost cell, sitting in or before the unit column, a text label
+    with no digits (unit codes have them), followed by at most a few figures.
+    """
+    c0, v0 = filled[0]
+    label_cell = (c0, _text(v0))
+    if c0 > unit_col or _is_number_like(label_cell[1]) or any(ch.isdigit() for ch in label_cell[1]):
+        return None
+    if unit_text and unit_text != label_cell[1]:
+        return None  # the unit column holds something else: this is a unit row
+    figures = [c for c, v in filled if c > label_cell[0] and (isinstance(v, (int, float)) or _is_number_like(_text(v)))]
+    if not figures or len(filled) > 4:
+        return None
+    label = _stat_label(label_cell[1])
+    stat = next((k for k, pat in _STATS.items() if pat.match(label)), None)
+    if stat is None and not _SUMMARY_WORDS.search(label):
+        return None
+    return stat, figures[0]
 
 
 def detect_header(grid: Grid) -> HeaderInfo:
@@ -139,6 +187,11 @@ def classify_rows(
         same_as_header = sum(1 for c, v in filled if header_norm.get(c) and norm_header(v) == header_norm[c])
         if same_as_header >= max(2, (len(filled) + 1) // 2):
             out.append(ClassifiedRow(r, RowKind.REPEATED_HEADER, section))
+            continue
+
+        summary = _summary_row(filled, unit_col, unit_text) if unit_col is not None else None
+        if summary is not None:
+            out.append(ClassifiedRow(r, RowKind.SUMMARY, section, label=texts[0], stat=summary[0], stat_col=summary[1]))
             continue
 
         # A total label never sits next to a real unit code. "Total Wine & More" in
