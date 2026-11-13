@@ -5,7 +5,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from samples import make_flat_csv_with_problems, make_stacked_header_xlsx  # noqa: E402
+from samples import make_flat_csv_with_problems, make_stacked_header_xlsx
 
 
 @pytest.fixture

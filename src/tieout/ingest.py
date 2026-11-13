@@ -119,7 +119,11 @@ def _read_excel(path: Path, sheet: str | None) -> Grid:
     formulas = load_workbook(path, data_only=False)[ws.title]
     for r, frow in enumerate(formulas.iter_rows(values_only=True)):
         for c, fv in enumerate(frow):
-            if isinstance(fv, str) and fv.startswith("=") and (r >= len(rows) or c >= len(rows[r]) or rows[r][c] is None):
+            if (
+                isinstance(fv, str)
+                and fv.startswith("=")
+                and (r >= len(rows) or c >= len(rows[r]) or rows[r][c] is None)
+            ):
                 uncomputed.add((r, c))
 
     return Grid(file=path.name, sheet=ws.title, rows=_trim(rows), merges=merges, uncomputed=uncomputed)

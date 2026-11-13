@@ -18,11 +18,12 @@ import re
 import shutil
 import threading
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import date
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from tieout.ingest import SUPPORTED_SUFFIXES
 from tieout.mapping import TemplateStore
@@ -105,7 +106,9 @@ class JobStore:
         d = self.jobs_dir / job_id
         d.mkdir()
         (d / f"source{suffix}").write_bytes(content)
-        meta = JobMeta(job_id, safe_filename(filename), suffix, len(content), hashlib.sha256(content).hexdigest(), now_iso())
+        meta = JobMeta(
+            job_id, safe_filename(filename), suffix, len(content), hashlib.sha256(content).hexdigest(), now_iso()
+        )
         _write_json(d / "meta.json", asdict(meta))
         return meta
 

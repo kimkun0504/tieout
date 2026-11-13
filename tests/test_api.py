@@ -4,9 +4,9 @@ import json
 import pytest
 
 pytest.importorskip("fastapi")
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi.testclient import TestClient
 
-from tieout.api import create_app  # noqa: E402
+from tieout.api import create_app
 
 
 @pytest.fixture
@@ -64,7 +64,9 @@ def test_unknown_and_malformed_job_ids(client):
 
 def test_correction_flow_and_audit(client, flat_csv):
     job = upload(client, flat_csv).json()["job"]["id"]
-    bad = client.post(f"/api/jobs/{job}/corrections", json={"source_row": 6, "field": "current_rent", "value": "abc", "reason": "x"})
+    bad = client.post(
+        f"/api/jobs/{job}/corrections", json={"source_row": 6, "field": "current_rent", "value": "abc", "reason": "x"}
+    )
     assert bad.status_code == 422
     r = client.post(
         f"/api/jobs/{job}/corrections",
@@ -81,7 +83,10 @@ def test_correction_flow_and_audit(client, flat_csv):
 
     r = client.delete(f"/api/jobs/{job}/corrections", params={"source_row": 6, "field": "current_rent"})
     assert r.status_code == 200 and r.json()["result"]["review"]["corrections"] == []
-    assert client.delete(f"/api/jobs/{job}/corrections", params={"source_row": 6, "field": "current_rent"}).status_code == 404
+    assert (
+        client.delete(f"/api/jobs/{job}/corrections", params={"source_row": 6, "field": "current_rent"}).status_code
+        == 404
+    )
 
 
 def test_acknowledge_and_mapping(client, flat_csv):
@@ -108,7 +113,13 @@ def test_source_and_exports(client, stacked_xlsx):
     assert src["rows"][7][5] == "$1,425.00"  # F8, as in the original
     assert [4, 7, 4, 8] in src["merges"]
 
-    for fmt, ctype in [("csv", "text/csv"), ("xlsx", "spreadsheetml"), ("json", "application/json"), ("issues", "text/csv"), ("report", "markdown")]:
+    for fmt, ctype in [
+        ("csv", "text/csv"),
+        ("xlsx", "spreadsheetml"),
+        ("json", "application/json"),
+        ("issues", "text/csv"),
+        ("report", "markdown"),
+    ]:
         r = client.get(f"/api/jobs/{job}/export/{fmt}")
         assert r.status_code == 200 and ctype in r.headers["content-type"]
         assert "maple_court" in r.headers["content-disposition"]

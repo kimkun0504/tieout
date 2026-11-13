@@ -18,6 +18,7 @@ D = Decimal
 
 # --- money ------------------------------------------------------------------
 
+
 @pytest.mark.parametrize(
     "raw, expected",
     [
@@ -64,7 +65,10 @@ def test_money_rejects_bool_and_nan():
 
 # --- numbers ------------------------------------------------------------------
 
-@pytest.mark.parametrize("raw, expected", [("1,200", 1200), ("1,200 SF", 1200), ("850 sq ft", 850), (812.5, 812.5), ("9.5", 9.5)])
+
+@pytest.mark.parametrize(
+    "raw, expected", [("1,200", 1200), ("1,200 SF", 1200), ("850 sq ft", 850), (812.5, 812.5), ("9.5", 9.5)]
+)
 def test_number(raw, expected):
     assert parse_number(raw) == (expected, None)
 
@@ -75,6 +79,7 @@ def test_number_rejects_ambiguous(raw):
 
 
 # --- dates ---------------------------------------------------------------------
+
 
 @pytest.mark.parametrize(
     "raw, expected",
@@ -106,6 +111,7 @@ def test_month_to_month_is_explained():
 
 # --- status --------------------------------------------------------------------
 
+
 @pytest.mark.parametrize(
     "raw, expected",
     [
@@ -131,6 +137,7 @@ def test_unknown_status_is_flagged():
 
 
 # --- text, names, vacancy markers ---------------------------------------------------
+
 
 @pytest.mark.parametrize(
     "raw, expected",

@@ -14,6 +14,7 @@ def rules(result, severity=None):
 
 # --- charge lines ------------------------------------------------------------------
 
+
 def test_charge_lines_roll_up_per_unit(charges_xlsx):
     r = clean_file(charges_xlsx)
     assert [x.get("unit") for x in r.rows] == ["A101", "A102", "A103", "A104"]
@@ -60,6 +61,7 @@ def test_amount_column_without_charge_codes_is_total_charges(tmp_path):
 
 
 # --- corrections ----------------------------------------------------------------------
+
 
 def test_correction_overrides_value_and_keeps_original(flat_csv):
     review = Review()
@@ -114,6 +116,7 @@ def test_corrected_tenant_drives_inferred_status(tmp_path):
 
 # --- mapping overrides --------------------------------------------------------------------
 
+
 def test_mapping_override_moves_a_field(flat_csv):
     review = Review()
     review.override_mapping("Past Due", "other_charges")
@@ -131,6 +134,7 @@ def test_override_to_unknown_field_is_rejected():
 
 
 # --- acknowledgments and persistence --------------------------------------------------------
+
 
 def test_acknowledging_errors_changes_ok_but_keeps_the_issue(flat_csv):
     first = clean_file(flat_csv)
@@ -164,18 +168,19 @@ def test_review_round_trips_and_audits(tmp_path):
 
 # --- metrics -------------------------------------------------------------------------------
 
+
 def test_metrics_follow_underwriting_definitions(charges_xlsx):
     m = clean_file(charges_xlsx, as_of=date(2026, 11, 1)).metrics()
     assert m["units"] == 4 and m["occupied_units"] == 3
     assert m["physical_occupancy"] == 0.75
     assert m["gross_potential_rent"] == "7200.00"
-    assert m["in_place_rent"] == "5000.00"                # 1450 + 1500 + 2050
-    assert m["loss_to_lease"] == "100.00"                 # (1500-1450) + 0 + (2100-2050)
+    assert m["in_place_rent"] == "5000.00"  # 1450 + 1500 + 2050
+    assert m["loss_to_lease"] == "100.00"  # (1500-1450) + 0 + (2100-2050)
     assert m["vacancy_loss"] == "2100.00"
     assert m["economic_occupancy"] == round(5000 / 7200, 4)
     assert m["concessions"] == "-100.00"
     exp = m["lease_expirations"]
-    assert exp["expired_or_mtm"] == 1                     # A102 ended 2026-02-28
+    assert exp["expired_or_mtm"] == 1  # A102 ended 2026-02-28
     assert next(x for x in exp["by_month"] if x["month"] == "2026-12")["units"] == 1
     mix = {u["unit_type"]: u for u in m["unit_mix"]}
     assert mix["2x2"]["units"] == 2 and mix["2x2"]["occupied"] == 1

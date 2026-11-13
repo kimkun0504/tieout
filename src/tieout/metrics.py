@@ -59,7 +59,8 @@ def compute_metrics(rows: list[CleanRow], as_of: date | None = None) -> dict[str
         "in_place_rent": _m(sum(rent_occ, ZERO)),
         "loss_to_lease": _m(loss_to_lease),
         "loss_to_lease_pct": _ratio(loss_to_lease, sum((r.get("market_rent") for r in occupied), ZERO))
-        if loss_to_lease is not None else None,
+        if loss_to_lease is not None
+        else None,
         "vacancy_loss": _m(sum((r.get("market_rent") or ZERO for r in vacant), ZERO)) if has_market else None,
         "concessions": _m(concessions) if concessions else None,
         "avg_in_place_rent": _m(_avg(rent_occ)),
@@ -80,15 +81,20 @@ def _unit_mix(rows: list[CleanRow]) -> list[dict[str, Any]]:
     for unit_type, rs in sorted(groups.items()):
         occ = [r for r in rs if r.get("status") in OCCUPIED]
         sq = [Decimal(str(r.get("sqft"))) for r in rs if r.get("sqft")]
-        mix.append({
-            "unit_type": unit_type,
-            "units": len(rs),
-            "occupied": len(occ),
-            "occupancy": _ratio(len(occ), len(rs)),
-            "avg_sqft": round(float(_avg(sq)), 1) if sq else None,
-            "avg_market_rent": _m(_avg([r.get("market_rent") for r in rs if r.get("market_rent") is not None])),
-            "avg_in_place_rent": _m(_avg([r.get("current_rent") for r in occ if r.get("current_rent") is not None])),
-        })
+        avg_sq = _avg(sq)
+        mix.append(
+            {
+                "unit_type": unit_type,
+                "units": len(rs),
+                "occupied": len(occ),
+                "occupancy": _ratio(len(occ), len(rs)),
+                "avg_sqft": round(float(avg_sq), 1) if avg_sq is not None else None,
+                "avg_market_rent": _m(_avg([r.get("market_rent") for r in rs if r.get("market_rent") is not None])),
+                "avg_in_place_rent": _m(
+                    _avg([r.get("current_rent") for r in occ if r.get("current_rent") is not None])
+                ),
+            }
+        )
     return mix
 
 

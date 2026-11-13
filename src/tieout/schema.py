@@ -148,7 +148,9 @@ OUTPUT_FIELDS: tuple[str, ...] = tuple(f.name for f in RENT_ROLL_FIELDS if f.out
 # Charge codes vary by system ("RENT", "RNT", "BASERENT", "CONC", "PARK", "PET").
 # Classify them into rent, concession or other so per-line charges roll up into
 # current_rent, concessions and other_charges.
-RENT_CODE_RE = r"^(rent|rnt|rentr|rentres|base\s*rent|baserent|res\s*rent|apt\s*rent|mrent|market\s*rent|resident\s*rent)\b|^rent"
+RENT_CODE_RE = (
+    r"^(rent|rnt|rentr|rentres|base\s*rent|baserent|res\s*rent|apt\s*rent|mrent|market\s*rent|resident\s*rent)\b|^rent"
+)
 CONCESSION_CODE_RE = r"conc|concession|disc(ount)?\b|special|promo|free\s*rent|credit"
 
 STATUS_VALUES = ("occupied", "vacant", "notice", "model", "down")

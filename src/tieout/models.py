@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, field as dc_field
+from dataclasses import dataclass
+from dataclasses import field as dc_field
 from datetime import date
 from decimal import Decimal
 from enum import Enum
@@ -89,8 +90,14 @@ class Correction:
     at: str = ""  # ISO timestamp
 
     def to_dict(self) -> dict[str, Any]:
-        return {"source_row": self.source_row, "field": self.field, "value": self.value,
-                "reason": self.reason, "author": self.author, "at": self.at}
+        return {
+            "source_row": self.source_row,
+            "field": self.field,
+            "value": self.value,
+            "reason": self.reason,
+            "author": self.author,
+            "at": self.at,
+        }
 
 
 @dataclass(frozen=True)
@@ -120,7 +127,7 @@ class Issue:
     def id(self) -> str:
         """Stable across re-runs: built from what the issue is about, not its wording."""
         key = f"{self.rule}|{self.row}|{self.field}|{','.join(r.cell for r in self.refs)}"
-        return hashlib.sha1(key.encode()).hexdigest()[:12]
+        return hashlib.sha1(key.encode(), usedforsecurity=False).hexdigest()[:12]
 
     @property
     def open(self) -> bool:

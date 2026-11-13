@@ -8,7 +8,8 @@ labels ("Building A") and subtotal rows, and repeat the header on each page.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field as dc_field
+from dataclasses import dataclass
+from dataclasses import field as dc_field
 from enum import Enum
 from typing import Any
 

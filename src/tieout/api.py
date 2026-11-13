@@ -13,9 +13,9 @@ from __future__ import annotations
 import io
 import re
 from dataclasses import asdict
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
@@ -93,7 +93,13 @@ def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
     @app.get("/api/fields")
     def fields() -> list[dict[str, Any]]:
         return [
-            {"name": f.name, "type": f.type.value, "description": f.description, "required": f.required, "output": f.output}
+            {
+                "name": f.name,
+                "type": f.type.value,
+                "description": f.description,
+                "required": f.required,
+                "output": f.output,
+            }
             for f in RENT_ROLL_FIELDS
         ]
 
@@ -104,7 +110,10 @@ def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
         return [_job_view(m) for m in store.list()]
 
     @app.post("/api/jobs", status_code=201)
-    async def upload(file: UploadFile = File(...), as_of: str | None = Form(None)) -> dict[str, Any]:
+    async def upload(
+        file: Annotated[UploadFile, File()],
+        as_of: Annotated[str | None, Form()] = None,
+    ) -> dict[str, Any]:
         content = await file.read(MAX_UPLOAD_BYTES + 1)
         try:
             meta = store.create(file.filename or "upload", content)
@@ -173,14 +182,16 @@ def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
 
     @app.post("/api/jobs/{job_id}/corrections")
     def add_correction(job_id: str, body: CorrectionIn, x_tieout_user: str = Header("")) -> dict[str, Any]:
-        return mutate(job_id, x_tieout_user,
-                      lambda r, a: r.correct(body.source_row, body.field, body.value, body.reason, a))
+        return mutate(
+            job_id, x_tieout_user, lambda r, a: r.correct(body.source_row, body.field, body.value, body.reason, a)
+        )
 
     @app.delete("/api/jobs/{job_id}/corrections")
     def remove_correction(job_id: str, source_row: int, field: str, x_tieout_user: str = Header("")) -> dict[str, Any]:
         def fn(r: Any, a: str) -> None:
             if not r.remove_correction(source_row, field, a):
                 raise HTTPException(404, "No such correction")
+
         return mutate(job_id, x_tieout_user, fn)
 
     @app.post("/api/jobs/{job_id}/acknowledgments")
@@ -221,7 +232,8 @@ def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
             )(result, path)
             data = path.read_bytes()
         return StreamingResponse(
-            io.BytesIO(data), media_type=mime,
+            io.BytesIO(data),
+            media_type=mime,
             headers={"Content-Disposition": f'attachment; filename="{stem}{suffix}"'},
         )
 
@@ -242,6 +254,8 @@ def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
 def _cell_text(v: Any) -> str | None:
     if v is None:
         return None
-    if hasattr(v, "isoformat"):
-        return v.isoformat()[:10] if hasattr(v, "hour") and not (v.hour or v.minute) else v.isoformat()
+    if isinstance(v, datetime):
+        return v.date().isoformat() if not (v.hour or v.minute or v.second) else v.isoformat()
+    if isinstance(v, date):
+        return v.isoformat()
     return str(v)

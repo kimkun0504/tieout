@@ -13,6 +13,7 @@ def rules(result, severity=None):
 
 # --- stacked-header workbook: everything should tie out ---------------------
 
+
 def test_finds_two_row_header_below_title_rows(stacked_xlsx):
     r = clean_file(stacked_xlsx)
     assert [x + 1 for x in r.header.header_rows] == [5, 6]
@@ -84,6 +85,7 @@ def test_summary(stacked_xlsx):
 
 # --- flat CSV with planted problems ----------------------------------------
 
+
 def test_flat_csv_maps_alternate_names(flat_csv):
     r = clean_file(flat_csv)
     fields = {m.header: m.field for m in r.mappings}
@@ -126,6 +128,7 @@ def test_lease_expiry_needs_as_of(flat_csv):
 
 # --- templates and export ----------------------------------------------------
 
+
 def test_saved_template_is_reused(stacked_xlsx, tmp_path):
     store = TemplateStore(tmp_path / "templates")
     first = clean_file(stacked_xlsx)
@@ -145,6 +148,7 @@ def test_writes_all_outputs(flat_csv, tmp_path):
 
 # --- regression tests for review findings ------------------------------------------
 
+
 def _xlsx(tmp_path, rows, merges=(), name="t.xlsx"):
     from openpyxl import Workbook
 
@@ -161,12 +165,16 @@ def _xlsx(tmp_path, rows, merges=(), name="t.xlsx"):
 
 def test_merged_section_label_is_not_a_unit(tmp_path):
     """Finding 2: a section label merged across the row used to fill every column and become a unit."""
-    path = _xlsx(tmp_path, [
-        ["Unit", "Tenant", "Market Rent", "Rent", "Lease Start", "Lease End"],
-        ["Building A"],
-        ["101", "Lee", 1000, 1000, None, None],
-        ["Total", None, 1000, 1000],
-    ], merges=["A2:F2"])
+    path = _xlsx(
+        tmp_path,
+        [
+            ["Unit", "Tenant", "Market Rent", "Rent", "Lease Start", "Lease End"],
+            ["Building A"],
+            ["101", "Lee", 1000, 1000, None, None],
+            ["Total", None, 1000, 1000],
+        ],
+        merges=["A2:F2"],
+    )
     r = clean_file(path)
     assert [x.get("unit") for x in r.rows] == ["101"]
     assert r.rows[0].section == "Building A"
@@ -175,7 +183,9 @@ def test_merged_section_label_is_not_a_unit(tmp_path):
 
 def test_uncomputed_formula_total_is_an_error_not_a_silent_pass(tmp_path):
     """Finding 7: formulas with no saved result read as empty and skipped the tie-out."""
-    path = _xlsx(tmp_path, [["Unit", "Tenant", "Rent"], ["101", "A", 1000], ["102", "B", 2000], ["Total", None, "=SUM(C2:C3)"]])
+    path = _xlsx(
+        tmp_path, [["Unit", "Tenant", "Rent"], ["101", "A", 1000], ["102", "B", 2000], ["Total", None, "=SUM(C2:C3)"]]
+    )
     r = clean_file(path)
     assert not r.ok
     issue = next(i for i in r.issues if i.rule == "total_not_checkable")
@@ -193,7 +203,10 @@ def test_csv_quoted_field_keeps_its_line_break(tmp_path):
 
 def test_tenant_named_total_stays_a_unit(tmp_path):
     """Finding 3: 'Total Wine & More' deleted unit 101 and became a fake subtotal."""
-    path = _xlsx(tmp_path, [["Unit", "Tenant", "Rent"], ["101", "Total Wine & More", 5000], ["102", "Acme", 3000], ["Total", None, 8000]])
+    path = _xlsx(
+        tmp_path,
+        [["Unit", "Tenant", "Rent"], ["101", "Total Wine & More", 5000], ["102", "Acme", 3000], ["Total", None, 8000]],
+    )
     r = clean_file(path)
     assert [x.get("unit") for x in r.rows] == ["101", "102"]
     assert [t.label for t in r.totals] == ["Total"]
@@ -220,12 +233,16 @@ def test_page_footer_does_not_hide_duplicates(tmp_path):
 
 def test_second_total_line_reuses_the_same_rows(tmp_path):
     """Two consecutive total rows for one group (rent line, then deposit line)."""
-    path = _xlsx(tmp_path, [
-        ["Unit", "Tenant", "Rent", "Deposit"],
-        ["101", "A", 1000, 500], ["102", "B", 2000, 700],
-        ["Total", None, 3000, None],
-        ["Total", None, None, 1200],
-    ])
+    path = _xlsx(
+        tmp_path,
+        [
+            ["Unit", "Tenant", "Rent", "Deposit"],
+            ["101", "A", 1000, 500],
+            ["102", "B", 2000, 700],
+            ["Total", None, 3000, None],
+            ["Total", None, None, 1200],
+        ],
+    )
     r = clean_file(path)
     assert [len(t.scope_rows) for t in r.totals] == [2, 2]
     assert r.ok
@@ -233,7 +250,9 @@ def test_second_total_line_reuses_the_same_rows(tmp_path):
 
 def test_no_status_or_tenant_column_infers_from_rent(tmp_path):
     """Finding 6: every unit used to be marked vacant (0% occupancy) when both columns were missing."""
-    path = _xlsx(tmp_path, [["Unit", "Rent", "Market Rent"], ["101", 1000, 1000], ["102", 0, 1100], ["103", 1200, 1200]])
+    path = _xlsx(
+        tmp_path, [["Unit", "Rent", "Market Rent"], ["101", 1000, 1000], ["102", 0, 1100], ["103", 1200, 1200]]
+    )
     r = clean_file(path)
     assert [x.get("status") for x in r.rows] == ["occupied", "vacant", "occupied"]
     assert all(x.values["status"].derived for x in r.rows)

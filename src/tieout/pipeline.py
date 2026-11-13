@@ -9,7 +9,8 @@ Stages, in order:
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field as dc_field
+from dataclasses import dataclass
+from dataclasses import field as dc_field
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -122,7 +123,9 @@ def clean_file(
         elif cr.kind is RowKind.TOTAL:
             label = cr.label or "Total"
             scope = _total_scope(label, totals, since_last_total, all_data)
-            totals.append(ReportedTotal(cr.index + 1, label, cr.section, scope, _total_amounts(grid, cr.index, col_for)))
+            totals.append(
+                ReportedTotal(cr.index + 1, label, cr.section, scope, _total_amounts(grid, cr.index, col_for))
+            )
             since_last_total = []
         else:
             skipped[cr.kind.value] = skipped.get(cr.kind.value, 0) + 1
@@ -136,9 +139,15 @@ def clean_file(
         _ensure_status(row, "tenant" in col_for)
     for c in review.corrections:
         if c.source_row not in by_source_row:
-            extra_issues.append(Issue(Severity.WARNING, "correction_orphaned",
-                                      f"A correction targets row {c.source_row}, which is no longer a unit row.",
-                                      c.source_row, c.field))
+            extra_issues.append(
+                Issue(
+                    Severity.WARNING,
+                    "correction_orphaned",
+                    f"A correction targets row {c.source_row}, which is no longer a unit row.",
+                    c.source_row,
+                    c.field,
+                )
+            )
 
     issues = validate.run_all(rows, totals, mappings, as_of) + extra_issues
     for issue in issues:
@@ -147,6 +156,7 @@ def clean_file(
 
 
 # --- mapping ------------------------------------------------------------------------
+
 
 def _apply_overrides(mappings: list[ColumnMapping], overrides: dict[str, str | None]) -> list[ColumnMapping]:
     """Reviewer overrides win. A field moved to a new column is removed from its old one."""
@@ -188,6 +198,7 @@ def _reconcile_charge_columns(mappings: list[ColumnMapping]) -> list[ColumnMappi
 
 
 # --- rows -----------------------------------------------------------------------------
+
 
 def _total_scope(label: str, previous: list[ReportedTotal], since_last: list[int], all_data: list[int]) -> list[int]:
     """Which data rows a total row should add up.
@@ -276,8 +287,9 @@ def _roll_up_charges(row: CleanRow, col_for: dict[str, int]) -> None:
     if cells["rent"] or not any(cells.values()):
         put("current_rent", sums["rent"], cells["rent"])
     elif "current_rent" not in col_for:
-        row.values["current_rent"] = TracedValue(None, None, None, derived=True,
-                                                 issue="no charge line looks like rent; check the charge codes")
+        row.values["current_rent"] = TracedValue(
+            None, None, None, derived=True, issue="no charge line looks like rent; check the charge codes"
+        )
     if cells["concession"]:
         put("concessions", sums["concession"], cells["concession"])
     if cells["other"]:

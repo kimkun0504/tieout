@@ -14,10 +14,11 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Protocol, Sequence
+from typing import Protocol
 
 from tieout.schema import FIELDS_BY_NAME, RENT_ROLL_FIELDS, FieldSpec
 
@@ -38,11 +39,35 @@ def norm_header(text: object) -> str:
 # synonym "monthly rent" but is a per-square-foot rate; "Annual Rent" is 12x
 # monthly rent. A header with one of these words only matches a synonym that
 # contains the same word.
-QUALIFIERS = frozenset({
-    "sf", "psf", "sqft", "annual", "annually", "annualized", "yr", "year", "yearly",
-    "pct", "percent", "ytd", "per", "prior", "previous", "last", "budget",
-    "budgeted", "variance", "change", "delta", "balance", "due", "avg", "average",
-})
+QUALIFIERS = frozenset(
+    {
+        "sf",
+        "psf",
+        "sqft",
+        "annual",
+        "annually",
+        "annualized",
+        "yr",
+        "year",
+        "yearly",
+        "pct",
+        "percent",
+        "ytd",
+        "per",
+        "prior",
+        "previous",
+        "last",
+        "budget",
+        "budgeted",
+        "variance",
+        "change",
+        "delta",
+        "balance",
+        "due",
+        "avg",
+        "average",
+    }
+)
 
 
 def score_header(header: str, spec: FieldSpec) -> float:
@@ -83,9 +108,7 @@ class HeaderMapper(Protocol):
     {header: (field_name, confidence)} for the ones it can place.
     """
 
-    def suggest(
-        self, headers: dict[str, list[str]], free_fields: list[str]
-    ) -> dict[str, tuple[str, float]]: ...
+    def suggest(self, headers: dict[str, list[str]], free_fields: list[str]) -> dict[str, tuple[str, float]]: ...
 
 
 MIN_CONFIDENCE = 0.75
@@ -121,11 +144,11 @@ def map_columns(
         free = [f.name for f in RENT_ROLL_FIELDS if f.name not in taken_fields]
         if unmapped and free:
             for header, (field, conf) in mapper.suggest(unmapped, free).items():
-                col = next((c for c, h in headers.items() if h == header and c not in taken), None)
-                if col is None or field not in FIELDS_BY_NAME or field in taken_fields:
+                target = next((c for c, h in headers.items() if h == header and c not in taken), None)
+                if target is None or field not in FIELDS_BY_NAME or field in taken_fields:
                     continue
                 # Cap model guesses below rule matches so they always surface for review.
-                taken[col] = (field, min(conf, 0.8), "mapper")
+                taken[target] = (field, min(conf, 0.8), "mapper")
                 taken_fields.add(field)
 
     result = []
