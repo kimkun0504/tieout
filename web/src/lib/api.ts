@@ -1,4 +1,4 @@
-import type { ExportFormat, FieldInfo, Job, JobResponse, SourceSheet } from "./types";
+import type { AnyJobResponse, ExportFormat, FieldInfo, Job, JobResponse, SourceSheet } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -53,12 +53,12 @@ const json = (body: unknown) => JSON.stringify(body);
 export const api = {
   fields: () => request<FieldInfo[]>("/api/fields"),
   jobs: () => request<Job[]>("/api/jobs"),
-  job: (id: string) => request<JobResponse>(`/api/jobs/${id}`),
+  job: (id: string) => request<AnyJobResponse>(`/api/jobs/${id}`),
   upload: (file: File, asOf?: string) => {
     const form = new FormData();
     form.append("file", file);
     if (asOf) form.append("as_of", asOf);
-    return request<JobResponse>("/api/jobs", { method: "POST", body: form });
+    return request<AnyJobResponse>("/api/jobs", { method: "POST", body: form });
   },
   remove: (id: string) => request<void>(`/api/jobs/${id}`, { method: "DELETE" }),
   settings: (id: string, settings: { sheet?: string | null; as_of?: string | null }) =>

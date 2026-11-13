@@ -3,7 +3,7 @@ import { api } from "../lib/api";
 import { useJob, useJobAction } from "../lib/hooks";
 import { go } from "../lib/route";
 import { NONE, type Selection } from "../lib/selection";
-import type { ExportFormat, JobResponse } from "../lib/types";
+import type { ExportFormat, JobResponse, T12Response } from "../lib/types";
 import { AuditLog } from "./AuditLog";
 import { Inspector } from "./Inspector";
 import { IssueQueue } from "./IssueQueue";
@@ -11,6 +11,7 @@ import { Check } from "./JobsPage";
 import { MappingTable } from "./MappingTable";
 import { Metrics } from "./Metrics";
 import { SourceView } from "./SourceView";
+import { T12View } from "./T12View";
 import { StackingPlan } from "./StackingPlan";
 import { TieOutStrip } from "./TieOutStrip";
 import { Button, Empty, ErrorNote } from "./ui";
@@ -35,11 +36,13 @@ export function JobView({ id }: { id: string }) {
     );
   }
 
-  const { result } = job.data;
+  if (job.data.result.document_type === "t12") return <T12View data={job.data as T12Response} />;
+  const data = job.data as JobResponse;
+  const { result } = data;
   return (
     <Review
       id={id}
-      data={job.data}
+      data={data}
       selection={selection}
       setSelection={setSelection}
       tab={tab}

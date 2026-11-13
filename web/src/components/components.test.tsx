@@ -95,3 +95,31 @@ describe("UnitsTable keyboard navigation", () => {
     expect(onSelect).toHaveBeenLastCalledWith({ row: 2, field: "current_rent" });
   });
 });
+
+describe("T12View", () => {
+  it("shows which tie-out direction fails and lists the issue", async () => {
+    const { T12View } = await import("./T12View");
+    const months = ["2026-01", "2026-02"];
+    const line = (row: number, name: string, kind: "line" | "subtotal" | "noi", section: string, a: string[]) => ({
+      source_row: row, code: null, name, section, kind, category: kind === "line" ? "gross_potential_rent" : null,
+      amounts: a, cells: a.map((_, i) => `${"CD"[i]}${row}`), total: null, total_cell: null, month_sum: "0",
+    });
+    const data = {
+      job: { id: "j", filename: "t12.xlsx", suffix: ".xlsx", size: 1, sha256: "", uploaded_at: "", updated_at: "", sheet: null, as_of: null, last_summary: {}, last_ok: false },
+      result: {
+        document_type: "t12" as const, tieout_version: "0.1.0", source: { file: "t12.xlsx", sheet: "T12", header_row: 1 },
+        ok: false, months,
+        summary: { period: "Jan 2026 to Feb 2026", months: 2, line_items: 1, total_income: "200.00", total_expenses: "0.00",
+          noi: "200.00", expense_ratio: 0, by_category: { gross_potential_rent: "200.00" }, uncategorized: 0, errors: 1, warnings: 0 },
+        lines: [line(3, "Rent", "line", "income", ["100.00", "100.00"]), line(5, "Net Operating Income", "noi", "noi", ["100.00", "150.00"])],
+        issues: [issue({ rule: "t12_noi_mismatch", row: 5, field: null, cells: ["D5"], message: "NOI for Feb 2026 is 150.00, but income 100.00 minus expenses 0.00 is 100.00 (difference 50.00)." })],
+      },
+    };
+    wrap(<T12View data={data as never} />);
+    expect(screen.getByText("1 error to resolve")).toBeInTheDocument();
+    expect(screen.getAllByText("ties")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "1 place doesn't tie out" })).toBeInTheDocument();
+    expect(screen.getByText("NOI isn't income minus expenses")).toBeInTheDocument();
+    expect(screen.getByTitle(/^D5: NOI for Feb 2026/)).toHaveTextContent("150.00");
+  });
+});

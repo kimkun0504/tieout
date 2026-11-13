@@ -1,6 +1,6 @@
 # tieout
 
-Turns messy rent rolls (Excel, CSV, PDF) into clean, validated, AI-ready data, with every value traced to its source.
+Turns messy rent rolls and T-12 operating statements (Excel, CSV, PDF) into clean, validated, AI-ready data, with every value traced to its source.
 
 Every property management system exports rent rolls differently: title rows above the table, headers split over two rows, building sections, subtotals, charge lines under each unit, money stored as text, "VACANT" typed into the tenant column. tieout reads those files, maps them onto one schema, and checks that the numbers **tie out**: every subtotal and total in the file must equal the sum of the units it covers. A reviewer resolves what's left (correct a value, or accept an issue with a note) and exports data they can trust.
 
@@ -66,6 +66,8 @@ file ─> ingest ─> detect header ─> map columns ─> classify rows ─> bui
 | `review.py` | Reviewer decisions stored beside the untouched source, re-applied on every run, with an audit log |
 | `validate.py` | Rules: totals tie out, required columns, duplicates, reversed lease dates, vacant with rent, rent far from market, expired leases |
 | `metrics.py` | Standard rent roll analytics |
+| `t12.py` | T-12 statements: month header detection, line items and sections, across/down/through tie-outs, categories, tidy export |
+| `llm.py` | Optional Claude fallback for unfamiliar headers (sends header names and value shapes only) |
 | `export.py` | Excel, CSV (formula-injection safe), JSON payload, issues, report |
 | `store.py`, `api.py` | File-based job storage with atomic writes; FastAPI endpoints for the web app |
 | `web/` | React + TypeScript + Tailwind review app |
@@ -76,6 +78,18 @@ file ─> ingest ─> detect header ─> map columns ─> classify rows ─> bui
 - **The source is never modified.** Corrections, mapping overrides and accepted issues live in `review.json` beside it and are re-applied on every run, so output is reproducible and every change is attributable.
 - **Everything is traceable.** Each value carries its raw text and cell; rolled-up values carry every cell they came from.
 - **Money is exact.** Decimal arithmetic, half-up rounding, decimal strings in JSON.
+
+## T-12 operating statements
+
+Upload or `tieout clean` a T-12 and it is recognised by its row of month columns. tieout checks it three ways:
+
+| Check | Meaning |
+| --- | --- |
+| Across | Each line's 12 months add up to its Total column |
+| Down | Each subtotal equals its lines, month by month |
+| Through | Net operating income equals income minus expenses, month by month |
+
+Line items are mapped to standard underwriting categories (gross potential rent, loss to lease, vacancy, concessions, other income, payroll, repairs and maintenance, utilities, management fee, taxes, insurance...) within their section; anything unmatched is listed rather than guessed. Exports include a tidy CSV with one row per line item per month and the source cell of every amount.
 
 ## Optional: Claude for unfamiliar headers
 
@@ -109,7 +123,8 @@ CI runs all of the above on Python 3.10 to 3.13, builds the web app and the Dock
 ## Roadmap
 
 - [ ] OCR for scanned PDFs (text-based PDFs are supported)
-- [ ] T-12 operating statement support
+- [ ] Reviewer corrections for T-12 statements (rent rolls have them)
+- [ ] Cross-check a rent roll against its T-12 (rent roll rent vs T-12 rental income)
 - [ ] Multi-user: authentication, roles, shared templates
 - [ ] Export to common underwriting templates and RAG-ready JSONL
 

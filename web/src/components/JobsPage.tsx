@@ -14,14 +14,14 @@ export function JobsPage() {
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-5 py-8">
       <div className="max-w-2xl">
-        <h1 className="text-2xl font-semibold tracking-tight">Check a rent roll</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Check a rent roll or T-12</h1>
         <p className="mt-1 text-ink-2">
           Upload an export from any property management system. tieout maps its columns, cleans every value, and checks
-          that each subtotal and total adds up to the units it covers.
+          that every subtotal and total adds up to what it covers. Operating statements are recognised automatically.
         </p>
       </div>
       <Upload />
-      <Panel title="Rent rolls">
+      <Panel title="Files">
         {jobs.isLoading ? (
           <Empty>Loading…</Empty>
         ) : jobs.error ? (
@@ -31,7 +31,7 @@ export function JobsPage() {
         ) : jobs.data && jobs.data.length > 0 ? (
           <JobsTable jobs={jobs.data} />
         ) : (
-          <Empty>No rent rolls yet. Upload one above to start a review.</Empty>
+          <Empty>No files yet. Upload a rent roll or T-12 above to start a review.</Empty>
         )}
       </Panel>
     </main>
@@ -75,7 +75,7 @@ function Upload() {
         }`}
       >
         <div className="min-w-0 flex-1">
-          <p className="font-medium">{upload.isPending ? "Reading the file…" : "Drop a rent roll here: Excel, CSV or PDF"}</p>
+          <p className="font-medium">{upload.isPending ? "Reading the file…" : "Drop a rent roll or T-12 here: Excel, CSV or PDF"}</p>
           <p className="text-sm text-ink-3">Up to 25 MB. PDFs need a text layer (not a scan). The original file is never changed.</p>
         </div>
         <label className="flex items-center gap-2 text-sm text-ink-2">
@@ -121,8 +121,8 @@ function JobsTable({ jobs }: { jobs: Job[] }) {
             <th className="px-4 py-2 font-medium">File</th>
             <th className="px-4 py-2 font-medium">Result</th>
             <th className="px-4 py-2 text-right font-medium">Units</th>
-            <th className="px-4 py-2 text-right font-medium">Occupancy</th>
-            <th className="px-4 py-2 text-right font-medium">Monthly rent</th>
+            <th className="px-4 py-2 text-right font-medium">Occupancy or period</th>
+            <th className="px-4 py-2 text-right font-medium">Rent or NOI</th>
             <th className="px-4 py-2 font-medium">Uploaded</th>
             <th className="px-4 py-2" />
           </tr>
@@ -139,9 +139,22 @@ function JobsTable({ jobs }: { jobs: Job[] }) {
               <td className="px-4 py-2.5">
                 <ResultBadge job={j} />
               </td>
-              <td className="px-4 py-2.5 text-right">{j.last_summary.units ?? ""}</td>
-              <td className="px-4 py-2.5 text-right">{fmtPct(j.last_summary.physical_occupancy)}</td>
-              <td className="px-4 py-2.5 text-right">{fmtMoney(j.last_summary.total_current_rent ?? null)}</td>
+              {j.document_type === "t12" ? (
+                <>
+                  <td className="px-4 py-2.5 text-right text-ink-2">T-12</td>
+                  <td className="px-4 py-2.5 text-right text-ink-2">{(j.last_summary as { period?: string }).period ?? ""}</td>
+                  <td className="px-4 py-2.5 text-right">
+                    {fmtMoney((j.last_summary as { noi?: string }).noi ?? null)}
+                    <span className="ml-1 text-xs text-ink-3">NOI</span>
+                  </td>
+                </>
+              ) : (
+                <>
+                  <td className="px-4 py-2.5 text-right">{j.last_summary.units ?? ""}</td>
+                  <td className="px-4 py-2.5 text-right">{fmtPct(j.last_summary.physical_occupancy)}</td>
+                  <td className="px-4 py-2.5 text-right">{fmtMoney(j.last_summary.total_current_rent ?? null)}</td>
+                </>
+              )}
               <td className="px-4 py-2.5 text-ink-2">{fmtTimestamp(j.uploaded_at)}</td>
               <td className="px-4 py-2.5 text-right">
                 <Button
@@ -169,7 +182,10 @@ export function ResultBadge({ job }: { job: Pick<Job, "last_ok" | "last_summary"
   if (job.last_ok) {
     return (
       <span className="inline-flex items-center gap-1.5 font-medium text-tie">
-        <Check /> Ties out{warnings ? <span className="font-normal text-ink-3">, {warnings} to check</span> : null}
+        <Check />
+        <span>
+          Ties out{warnings ? <span className="font-normal text-ink-3">, {warnings} to check</span> : null}
+        </span>
       </span>
     );
   }

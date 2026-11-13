@@ -146,6 +146,7 @@ export interface AuditEvent {
 }
 
 export interface Result {
+  document_type?: "rent_roll";
   tieout_version: string;
   source: { file: string; sheet: string; sheets: string[]; header_rows: number[] };
   ok: boolean;
@@ -177,12 +178,20 @@ export interface Job {
   as_of: string | null;
   last_summary: Partial<Summary>;
   last_ok: boolean | null;
+  document_type?: "rent_roll" | "t12";
 }
 
 export interface JobResponse {
   job: Job;
   result: Result;
 }
+
+export interface T12Response {
+  job: Job;
+  result: T12Result;
+}
+
+export type AnyJobResponse = JobResponse | T12Response;
 
 export interface SourceSheet {
   sheet: string;
@@ -192,3 +201,42 @@ export interface SourceSheet {
 }
 
 export type ExportFormat = "xlsx" | "csv" | "json" | "issues" | "report" | "jsonl";
+
+// --- T-12 operating statements (tieout.t12.to_payload) ---------------------------------
+
+export interface T12Line {
+  source_row: number;
+  code: string | null;
+  name: string;
+  section: "income" | "expense" | "other" | "below_noi" | "noi";
+  kind: "line" | "subtotal" | "noi";
+  category: string | null;
+  amounts: (string | null)[];
+  cells: (string | null)[];
+  total: string | null;
+  total_cell: string | null;
+  month_sum: string;
+}
+
+export interface T12Result {
+  document_type: "t12";
+  tieout_version: string;
+  source: { file: string; sheet: string; header_row: number };
+  ok: boolean;
+  months: string[];
+  summary: {
+    period: string | null;
+    months: number;
+    line_items: number;
+    total_income: string;
+    total_expenses: string;
+    noi: string;
+    expense_ratio: number | null;
+    by_category: Record<string, string>;
+    uncategorized: number;
+    errors: number;
+    warnings: number;
+  };
+  lines: T12Line[];
+  issues: Issue[];
+}

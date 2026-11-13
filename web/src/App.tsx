@@ -30,7 +30,7 @@ function TopBar() {
         <Logo />
         tieout
       </a>
-      <span className="hidden text-sm text-white/60 sm:inline">Rent roll review</span>
+      <span className="hidden text-sm text-white/60 sm:inline">Rent roll and T-12 review</span>
       <label className="ml-auto flex items-center gap-2 text-sm text-white/70">
         Reviewer
         <input
