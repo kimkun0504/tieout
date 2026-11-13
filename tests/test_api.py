@@ -222,3 +222,16 @@ def test_t12_upload_is_detected_and_checked(client, tmp_path):
 
 def test_rent_roll_payload_names_its_type(client, flat_csv):
     assert upload(client, flat_csv).json()["result"]["document_type"] == "rent_roll"
+
+
+def test_compare_endpoint(client, tmp_path, flat_csv):
+    from samples import make_t12_xlsx
+
+    rr = upload(client, flat_csv, as_of="2026-11-01").json()["job"]["id"]
+    t12 = upload(client, make_t12_xlsx(tmp_path / "t.xlsx")).json()["job"]["id"]
+    r = client.get("/api/compare", params={"rent_roll": rr, "t12": t12})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["t12"]["last_month"] == "2026-10"
+    assert {c["metric"] for c in body["checks"]} == {"gross_potential_rent", "rent_in_place", "economic_occupancy"}
+    assert client.get("/api/compare", params={"rent_roll": t12, "t12": rr}).status_code == 422

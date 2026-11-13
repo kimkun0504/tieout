@@ -89,6 +89,8 @@ Upload or `tieout clean` a T-12 and it is recognised by its row of month columns
 | Down | Each subtotal equals its lines, month by month |
 | Through | Net operating income equals income minus expenses, month by month |
 
+**Rent roll vs T-12:** pick the property's rent roll from the T-12 screen (or call `/api/compare`) to check market rent against gross potential rent, rent in place against net rental income, and economic occupancy on both, all against the statement's last month. Within 2% is consistent; beyond 5% needs explaining.
+
 Line items are mapped to standard underwriting categories (gross potential rent, loss to lease, vacancy, concessions, other income, payroll, repairs and maintenance, utilities, management fee, taxes, insurance...) within their section; anything unmatched is listed rather than guessed. Exports include a tidy CSV with one row per line item per month and the source cell of every amount.
 
 ## Optional: Claude for unfamiliar headers
@@ -124,7 +126,6 @@ CI runs all of the above on Python 3.10 to 3.13, builds the web app and the Dock
 
 - [ ] OCR for scanned PDFs (text-based PDFs are supported)
 - [ ] Reviewer corrections for T-12 statements (rent rolls have them)
-- [ ] Cross-check a rent roll against its T-12 (rent roll rent vs T-12 rental income)
 - [ ] Multi-user: authentication, roles, shared templates
 - [ ] Export to common underwriting templates and RAG-ready JSONL
 

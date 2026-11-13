@@ -20,6 +20,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
+from itertools import pairwise
 from typing import Any
 
 from tieout.ingest import Grid, SourceRef
@@ -141,11 +142,18 @@ class Statement:
         }
 
 
+MIN_MONTHS = 3  # T-3 and T-6 statements are common too
+
+
+def _consecutive(months: list[date]) -> bool:
+    return all((b.year * 12 + b.month) - (a.year * 12 + a.month) == 1 for a, b in pairwise(months))
+
+
 def find_month_header(grid: Grid, scan: int = 30) -> tuple[int, dict[int, date], int | None] | None:
-    """(row, {column: month}, total column) for the first row with six or more month headers."""
+    """(row, {column: month}, total column) for the first row with a run of 3+ consecutive month headers."""
     for r in range(min(scan, len(grid.rows))):
         months = {c: m for c in range(grid.width) if (m := month_of(grid.merged_value(r, c))) is not None}
-        if len(months) >= 6:
+        if len(months) >= MIN_MONTHS and _consecutive([months[c] for c in sorted(months)]):
             last = max(months)
             total_col = next(
                 (
@@ -244,7 +252,7 @@ def _validate(stmt: Statement) -> list[Issue]:
     n = len(stmt.months)
 
     # Months must be consecutive.
-    for prev, nxt in zip(stmt.months, stmt.months[1:], strict=False):
+    for prev, nxt in pairwise(stmt.months):
         if (nxt.year * 12 + nxt.month) - (prev.year * 12 + prev.month) != 1:
             issues.append(Issue(Severity.WARNING, "t12_month_gap", f"Months jump from {prev:%b %Y} to {nxt:%b %Y}."))
     if n != 12:

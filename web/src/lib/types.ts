@@ -240,3 +240,21 @@ export interface T12Result {
   lines: T12Line[];
   issues: Issue[];
 }
+
+export interface ComparisonCheck {
+  metric: string;
+  label: string;
+  rent_roll: string | null;
+  t12: string | null;
+  difference: string | null;
+  pct: number | null;
+  status: "consistent" | "check" | "investigate" | "unavailable";
+  explanation: string;
+}
+
+export interface CompareResult {
+  rent_roll: { file: string; as_of: string | null };
+  t12: { file: string; last_month: string | null };
+  checks: ComparisonCheck[];
+  timing: { rent_roll_as_of: string; t12_last_month: string; months_apart: number; status: string } | null;
+}

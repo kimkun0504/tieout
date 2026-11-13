@@ -1,4 +1,4 @@
-import type { AnyJobResponse, ExportFormat, FieldInfo, Job, JobResponse, SourceSheet } from "./types";
+import type { AnyJobResponse, CompareResult, ExportFormat, FieldInfo, Job, JobResponse, SourceSheet } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -81,6 +81,8 @@ export const api = {
     request<JobResponse>(`/api/jobs/${id}/acknowledgments/${issueId}`, { method: "DELETE" }),
   saveTemplate: (id: string, name: string) =>
     request<{ template: string }>(`/api/jobs/${id}/template`, { method: "POST", body: json({ name }) }),
+  compare: (rentRoll: string, t12: string) =>
+    request<CompareResult>(`/api/compare?rent_roll=${rentRoll}&t12=${t12}`),
   exportUrl: (id: string, fmt: ExportFormat, redactTenants = false) =>
     `/api/jobs/${id}/export/${fmt}${redactTenants ? "?redact_tenants=true" : ""}`,
 };

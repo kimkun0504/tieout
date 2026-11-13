@@ -252,6 +252,16 @@ def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
         path = store.templates.save(result.header.headers, result.mappings, body.name)
         return {"template": path.stem, "name": body.name}
 
+    @app.get("/api/compare")
+    def compare_documents(rent_roll: str, t12: str) -> dict[str, Any]:
+        """Cross-check a rent roll against a T-12 for the same property."""
+        from tieout.compare import compare
+        from tieout.t12 import read_t12
+
+        if store.meta(rent_roll).document_type != "rent_roll" or store.meta(t12).document_type != "t12":
+            raise HTTPException(422, "Choose one rent roll and one T-12.")
+        return compare(store.run(rent_roll), read_t12(store.grid(t12)))
+
     # --- exports -----------------------------------------------------------------------
 
     media = {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import { fmtMoney, fmtMonth, fmtPct, ruleLabel } from "../lib/format";
 import type { Issue, T12Line, T12Response } from "../lib/types";
+import { ComparePanel } from "./ComparePanel";
 import { Check } from "./JobsPage";
 import { Empty, SeverityMark } from "./ui";
 
@@ -184,6 +185,8 @@ export function T12View({ data }: { data: T12Response }) {
               </p>
             )}
           </section>
+
+          <ComparePanel t12Id={job.id} />
 
           <section aria-label="Issues" className="rounded-md border border-rule bg-surface">
             <h2 className="border-b border-rule-soft px-4 py-2.5 text-sm font-semibold">To review</h2>
