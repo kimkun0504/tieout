@@ -239,4 +239,5 @@ def test_no_status_or_tenant_column_infers_from_rent(tmp_path):
     assert all(x.values["status"].derived for x in r.rows)
     assert r.summary()["physical_occupancy"] == round(2 / 3, 4)
     assert "vacant_with_rent" not in rules(r)
+    assert "occupied_without_tenant" not in rules(r)  # there is no tenant column to be empty
     assert "status_inferred" in rules(r, Severity.INFO)

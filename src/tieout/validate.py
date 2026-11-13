@@ -99,7 +99,7 @@ def check_row_rules(rows: list[CleanRow], as_of: date | None) -> list[Issue]:
             issues.append(Issue(Severity.ERROR, "missing_unit", "Row has data but no unit identifier.", r, "unit"))
         if status == "vacant" and rent and rent > 0:
             issues.append(Issue(Severity.WARNING, "vacant_with_rent", f"Unit {unit} is vacant but shows rent {rent}.", r, "current_rent"))
-        if status in ("occupied", "notice") and not row.get("tenant"):
+        if status in ("occupied", "notice") and "tenant" in row.values and not row.get("tenant"):
             issues.append(Issue(Severity.WARNING, "occupied_without_tenant", f"Unit {unit} is {status} but has no tenant name.", r, "tenant"))
         if status in ("occupied", "notice") and (rent is None or rent == 0):
             issues.append(Issue(Severity.WARNING, "occupied_without_rent", f"Unit {unit} is {status} but has no rent.", r, "current_rent"))
