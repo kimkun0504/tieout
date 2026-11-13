@@ -80,6 +80,8 @@ def parse_money(value: Any) -> Parsed:
     s = " ".join(str(value).split())
     if s.lower() in _EMPTY_TOKENS:
         return None, None
+    if re.fullmatch(r"\(?\s*(?:US)?\$?\s*[-\u2013\u2014]\s*\)?", s):
+        return None, None  # Excel's accounting format shows nothing as "$ -", same as a bare dash
 
     negative = False
     if s.startswith("(") and s.endswith(")"):

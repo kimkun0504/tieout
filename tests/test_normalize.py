@@ -186,3 +186,11 @@ def test_two_digit_years_use_a_fixed_pivot():
     assert parse_date("1/2/68") == (date(2068, 1, 2), None)
     assert parse_date("1/2/69") == (date(1969, 1, 2), None)
     assert parse_date("1/2/26") == (date(2026, 1, 2), None)
+
+
+@pytest.mark.parametrize("text", ["$ -", "$-", "$  -   ", "($ -)", "US$ -", "$ –"])
+def test_accounting_format_dash_is_empty_like_a_bare_dash(text):
+    from tieout.normalize import parse
+    from tieout.schema import FieldType
+
+    assert parse(text, FieldType.MONEY) == parse("-", FieldType.MONEY) == (None, None)
