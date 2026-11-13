@@ -18,7 +18,14 @@ tieout serve                      # http://127.0.0.1:8000
 python examples/make_samples.py
 tieout clean examples/data/maple_court.xlsx                       # PASS
 tieout clean examples/data/flat_export.csv --as-of 2026-11-01     # NEEDS REVIEW
+
+# A whole folder (rent rolls and T-12s); writes out/<file>/… and out/summary.csv
+tieout batch examples/data -o out --strict                        # exit 1 unless every file ties out
 ```
+
+`tieout batch` skips Excel lock files (`~$…`) and hidden files, keeps going past a file it can't read
+(the summary records the error), and gives each file its own folder, so `2024/t12.xlsx` and `2025/t12.xlsx`
+don't overwrite each other.
 
 Or with Docker:
 

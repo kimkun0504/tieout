@@ -30,6 +30,15 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--review", type=Path, help="Reviewer decisions (corrections, overrides) from a review.json file")
     c.add_argument("--strict", action="store_true", help="Exit with code 1 if any error-level issue is left open")
 
+    b = sub.add_parser("batch", help="Clean every rent roll and T-12 in a folder and write a summary.csv")
+    b.add_argument("folder", type=Path)
+    b.add_argument("-o", "--out", type=Path, default=Path("out"), help="Output folder (default: out/)")
+    b.add_argument("-r", "--recursive", action="store_true", help="Include subfolders")
+    b.add_argument("--templates", type=Path, help="Folder of saved column-mapping templates")
+    b.add_argument("--as-of", type=date.fromisoformat, help="Report date (YYYY-MM-DD) for lease-expiry checks")
+    b.add_argument("--llm", action="store_true", help="Ask Claude to place headers the rules can't")
+    b.add_argument("--strict", action="store_true", help="Exit with code 1 unless every file ties out")
+
     s = sub.add_parser("serve", help="Run the review web app")
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8000)
@@ -67,6 +76,30 @@ def main(argv: list[str] | None = None) -> int:
         print(render_report(result))
         print("Wrote:", ", ".join(str(v) for v in paths.values()))
         return 1 if args.strict and not result.ok else 0
+    if args.command == "batch":
+        from tieout.batch import render_summary, run_batch
+
+        if not args.folder.is_dir():
+            print(f"Not a folder: {args.folder}", file=sys.stderr)
+            return 2
+        mapper = None
+        if args.llm:
+            from tieout.llm import AnthropicHeaderMapper
+
+            mapper = AnthropicHeaderMapper()
+        batch = run_batch(
+            args.folder,
+            args.out,
+            recursive=args.recursive,
+            templates=TemplateStore(args.templates) if args.templates else None,
+            as_of=args.as_of,
+            mapper=mapper,
+        )
+        print(render_summary(batch))
+        print("Wrote:", args.out / "summary.csv")
+        if not batch.entries:
+            return 2
+        return 1 if args.strict and not batch.ok else 0
     if args.command == "serve":
         try:
             import uvicorn
