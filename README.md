@@ -1,8 +1,8 @@
 # tieout
 
-Turns messy rent rolls (Excel, CSV, PDF) into clean, validated, AI-ready data, with every value traced to its source.
+Turns messy rent rolls (Excel, CSV) into clean, validated, AI-ready data, with every value traced to its source.
 
-Every property-management system exports rent rolls differently: title rows above the table, headers split over two rows, building sections, subtotal rows, money stored as text, ALL-CAPS names, "VACANT" typed into the tenant column. tieout reads those files, maps them onto one canonical schema, and checks that the numbers **tie out**: every subtotal and grand total must equal the sum of the rows it covers.
+Every property management system exports rent rolls differently: title rows above the table, headers split over two rows, building sections, subtotals, charge lines under each unit, money stored as text, "VACANT" typed into the tenant column. tieout reads those files, maps them onto one schema, and checks that the numbers **tie out**: every subtotal and total in the file must equal the sum of the units it covers. A reviewer resolves what's left (correct a value, or accept an issue with a note) and exports data they can trust.
 
 ## Quick start
 
@@ -10,63 +10,96 @@ Every property-management system exports rent rolls differently: title rows abov
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
-python examples/make_samples.py                      # writes two synthetic rent rolls
-tieout clean examples/data/maple_court.xlsx          # clean file: PASS
-tieout clean examples/data/flat_export.csv --as-of 2026-11-01   # planted problems: NEEDS REVIEW
-pytest
+# Web app (build the UI once)
+cd web && npm ci && npm run build && cd ..
+tieout serve                      # http://127.0.0.1:8000
+
+# Command line
+python examples/make_samples.py
+tieout clean examples/data/maple_court.xlsx                       # PASS
+tieout clean examples/data/flat_export.csv --as-of 2026-11-01     # NEEDS REVIEW
 ```
 
-Each run writes four files to `out/`:
+Or with Docker:
 
-| File | What it holds |
+```bash
+docker build -t tieout .
+docker run -p 8000:8000 -v tieout-data:/data tieout
+```
+
+## The review app
+
+| Part | What it does |
 | --- | --- |
-| `<name>.clean.csv` | One row per unit in the canonical schema, plus section and source row |
-| `<name>.clean.json` | Same rows; every value carries its raw text and source cell (e.g. `Rent Roll!F8`), plus mappings, totals and issues |
-| `<name>.issues.csv` | Errors, warnings and info, with row and cell references |
-| `<name>.report.md` | Human-readable summary: occupancy, rent totals, column mapping, issues |
+| Totals strip | Each reported total next to what its units add up to; the gap is called out |
+| Stacking plan | Every unit as a tile, shaded by status, marked where problems are |
+| Monthly figures | Physical and economic occupancy, gross potential rent, loss to lease, vacancy loss, concessions, unit mix, 12-month lease expirations |
+| To review | Open errors and warnings; accept with a required note, or reopen |
+| Units | Cleaned table; derived cells tinted blue, corrections amber, problems underlined |
+| Inspector | For any value: raw text, source cell, how it was derived, its problem, and a correction form that requires a reason |
+| Original file | The sheet exactly as uploaded, with the selected cell highlighted |
+| Column mapping | Change how a column is read; save the mapping as a template for that export format |
+| Changes | Who corrected, accepted or remapped what, and when |
+
+Exports: Excel workbook (Rent Roll, Issues, Summary), CSV, JSON with full provenance, issues CSV, Markdown report.
+
+The app is a single-user local tool: it binds to `127.0.0.1` and has no authentication. Put it behind an authenticating proxy before exposing it to a network.
 
 ## How it works
 
 ```
-file ──> ingest ──> detect header ──> map columns ──> normalize ──> validate ──> export
-         (xlsx/csv)  (title rows,      (template →      (money, dates,  (tie-out,
-                      2-row headers,    synonyms →       status, names)  duplicates,
-                      sections, totals) optional LLM)                    lease logic)
+file ─> ingest ─> detect header ─> map columns ─> classify rows ─> build rows ─> apply review ─> validate ─> export
+        xlsx/csv   title rows,      template >      data, charge,    parse values,   corrections,   tie-out,
+        merges,    2-row headers    synonyms >      total, section,  roll up         overrides,     duplicates,
+        formulas                    reviewer        repeated header, charge lines    accepted       lease logic,
+                                    overrides       page noise                       issues         metrics
 ```
 
 | Module | Responsibility |
 | --- | --- |
-| `ingest.py` | Read xlsx/csv into a grid; expand merged cells; remember sheet, row and column of every value |
-| `detect.py` | Find the header row (alone or joined with the row above); classify rows as data, total, section, repeated header or note |
-| `mapping.py` | Map headers to schema fields via saved templates, then synonyms/fuzzy match, then an optional `HeaderMapper` (e.g. an LLM) |
-| `normalize.py` | Parse money (`$1,250.00`, `(100)`), numbers, dates (Excel serials, text), status words; tidy ALL-CAPS names |
-| `validate.py` | Rules: totals tie out, required columns, duplicate units, reversed lease dates, vacant-with-rent, rent far from market, expired leases |
-| `export.py` | CSV, JSON with provenance, issues CSV, Markdown report |
-| `schema.py` | The canonical rent roll fields and their synonyms |
+| `ingest.py` | Read xlsx/csv into a grid that remembers sheet, row and column for every value; keeps merge ranges; finds formulas with no saved result |
+| `detect.py` | Find the header (alone or joined with the row above); classify rows as data, charge line, total, section, repeated header or note |
+| `mapping.py` | Map headers to fields via saved templates, then synonyms and fuzzy matching (qualifiers like SF, annual, prior block wrong matches), then an optional pluggable mapper |
+| `normalize.py` | Strict parsers: money, numbers, dates, status words, vacancy markers, names. Anything ambiguous is flagged, never guessed |
+| `pipeline.py` | Run the stages; roll charge lines up into rent, concessions and other charges; apply reviewer decisions; infer missing status from evidence |
+| `review.py` | Reviewer decisions stored beside the untouched source, re-applied on every run, with an audit log |
+| `validate.py` | Rules: totals tie out, required columns, duplicates, reversed lease dates, vacant with rent, rent far from market, expired leases |
+| `metrics.py` | Standard rent roll analytics |
+| `export.py` | Excel, CSV (formula-injection safe), JSON payload, issues, report |
+| `store.py`, `api.py` | File-based job storage with atomic writes; FastAPI endpoints for the web app |
+| `web/` | React + TypeScript + Tailwind review app |
 
-### Templates
+### Principles
 
-Once a reviewer has confirmed how a source system's export maps to the schema, save it:
-
-```bash
-tieout clean file.xlsx --templates templates/ --save-template "maple-court-export"
-```
-
-The next file with the same header layout maps from the template with no guessing.
+- **Never guess a number.** A value that doesn't clearly match its type is left blank and flagged. "Paid thru 10/31" is not $1,031.
+- **The source is never modified.** Corrections, mapping overrides and accepted issues live in `review.json` beside it and are re-applied on every run, so output is reproducible and every change is attributable.
+- **Everything is traceable.** Each value carries its raw text and cell; rolled-up values carry every cell they came from.
+- **Money is exact.** Decimal arithmetic, half-up rounding, decimal strings in JSON.
 
 ## Canonical schema
 
-`unit`, `unit_type`, `sqft`, `tenant`, `status` (occupied / vacant / notice / model / down), `market_rent`, `current_rent`, `deposit`, `move_in`, `lease_start`, `lease_end`.
+`unit`, `unit_type`, `sqft`, `tenant`, `status` (occupied / vacant / notice / model / down), `market_rent`, `current_rent`, `concessions`, `other_charges`, `total_charges`, `deposit`, `move_in`, `lease_start`, `lease_end`. Charge-line layouts also read `charge_code` and `charge_amount`.
+
+## Development
+
+```bash
+pytest                         # Python tests
+ruff check src tests && ruff format --check src tests
+mypy                           # strict
+cd web && npm test && npm run typecheck && npm run lint
+cd web && npm run dev          # UI on :5173, proxying /api to tieout serve on :8000
+```
+
+CI runs all of the above on Python 3.10 to 3.13, builds the web app and the Docker image, and smoke-tests the container.
 
 ## Roadmap
 
-- [ ] PDF input via [Docling](https://github.com/docling-project/docling): parse tables, then reuse this pipeline
-- [ ] Multi-line charge rows (rent, parking, pet fees listed under one unit)
-- [ ] LLM `HeaderMapper` implementation for unseen layouts, capped below rule confidence
+- [ ] PDF input: parse tables with Docling, then reuse this pipeline
+- [ ] LLM `HeaderMapper` for unseen layouts (interface in place, capped below rule confidence)
 - [ ] T-12 operating statement support
-- [ ] Review UI: grid with low-confidence cells highlighted and click-through to source
-- [ ] Export to underwriting templates (.xlsx) and RAG-ready JSONL chunks
+- [ ] Multi-user: authentication, roles, shared templates
+- [ ] Export to common underwriting templates and RAG-ready JSONL
 
 ## Data
 
-The sample files in `tests/samples.py` are synthetic: all names and numbers are invented. Don't commit real rent rolls; `out/` and `data/private/` are git-ignored.
+The sample files in `tests/samples.py` are synthetic: all names and numbers are invented. Don't commit real rent rolls; `out/`, `data/private/` and `tieout-data/` are git-ignored.

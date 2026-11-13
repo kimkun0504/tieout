@@ -19,3 +19,4 @@ examples/data/
 web/node_modules/
 src/tieout/web/
 *.tsbuildinfo
+tieout-data/

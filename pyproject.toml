@@ -29,6 +29,8 @@ tieout = "tieout.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/tieout"]
+# The web app is built into src/tieout/web (git-ignored); ship it when present.
+artifacts = ["src/tieout/web/**"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
