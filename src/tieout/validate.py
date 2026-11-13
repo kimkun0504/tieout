@@ -415,6 +415,22 @@ def check_tie_out(rows: list[CleanRow], totals: list[ReportedTotal]) -> list[Iss
                 Decimal("0"),
             )
             diff = Decimal(str(reported.value)) - computed
+            future = [r for r in total.scope_rows if r in by_row and not by_row[r].current]
+            if abs(diff) > TIE_OUT_TOLERANCE and future and len(future) < len(total.scope_rows):
+                # A grand total usually covers today's units only, not the future leases listed below them.
+                current = computed - sum((row_amount(by_row[r], name) for r in future), Decimal("0"))
+                if abs(Decimal(str(reported.value)) - current) <= TIE_OUT_TOLERANCE:
+                    issues.append(
+                        Issue(
+                            Severity.INFO,
+                            "total_ties_out",
+                            f"'{total.label}' {label(name)} of {show(reported.value)} ties out to its "
+                            f"{len(total.scope_rows) - len(future)} current units (future leases not included).",
+                            total.row,
+                            name,
+                        )
+                    )
+                    continue
             if abs(diff) > TIE_OUT_TOLERANCE:
                 issues.append(
                     Issue(

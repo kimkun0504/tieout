@@ -98,3 +98,17 @@ def test_headings_about_current_units_are_not_future(heading):
 def test_future_heading_wins_even_when_it_mentions_vacant_units():
     r = _run(CURRENT, [["Future Residents (pre-leased vacant units)"], *FUTURE[1:]])
     assert r.summary()["future_leases"] == 2
+
+
+def test_grand_total_of_current_units_only_still_ties_out():
+    grand = [["Grand Total", None, 2300, None, None, 4800, 2850, None]]
+    r = _run(CURRENT, FUTURE, grand)
+    msgs = [i.message for i in r.issues if i.row == 11 and i.rule == "total_ties_out"]
+    assert len(msgs) == 3 and all("current units (future leases not included)" in m for m in msgs)
+    assert r.ok
+
+
+def test_grand_total_including_future_leases_ties_out_normally():
+    grand = [["Grand Total", None, 3900, None, None, 8100, 6200, None]]
+    r = _run(CURRENT, FUTURE, grand)
+    assert r.ok
