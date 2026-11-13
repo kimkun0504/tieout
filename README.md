@@ -1,6 +1,6 @@
 # tieout
 
-Turns messy rent rolls (Excel, CSV) into clean, validated, AI-ready data, with every value traced to its source.
+Turns messy rent rolls (Excel, CSV, PDF) into clean, validated, AI-ready data, with every value traced to its source.
 
 Every property management system exports rent rolls differently: title rows above the table, headers split over two rows, building sections, subtotals, charge lines under each unit, money stored as text, "VACANT" typed into the tenant column. tieout reads those files, maps them onto one schema, and checks that the numbers **tie out**: every subtotal and total in the file must equal the sum of the units it covers. A reviewer resolves what's left (correct a value, or accept an issue with a note) and exports data they can trust.
 
@@ -57,7 +57,8 @@ file ─> ingest ─> detect header ─> map columns ─> classify rows ─> bui
 
 | Module | Responsibility |
 | --- | --- |
-| `ingest.py` | Read xlsx/csv into a grid that remembers sheet, row and column for every value; keeps merge ranges; finds formulas with no saved result |
+| `pdf.py` | Rebuild tables from text-based PDF exports, using the header line's columns as anchors; each row keeps its page |
+| `ingest.py` | Read xlsx/csv/pdf into a grid that remembers sheet, row and column for every value; keeps merge ranges; finds formulas with no saved result |
 | `detect.py` | Find the header (alone or joined with the row above); classify rows as data, charge line, total, section, repeated header or note |
 | `mapping.py` | Map headers to fields via saved templates, then synonyms and fuzzy matching (qualifiers like SF, annual, prior block wrong matches), then an optional pluggable mapper |
 | `normalize.py` | Strict parsers: money, numbers, dates, status words, vacancy markers, names. Anything ambiguous is flagged, never guessed |
@@ -94,7 +95,7 @@ CI runs all of the above on Python 3.10 to 3.13, builds the web app and the Dock
 
 ## Roadmap
 
-- [ ] PDF input: parse tables with Docling, then reuse this pipeline
+- [ ] OCR for scanned PDFs (text-based PDFs are supported)
 - [ ] LLM `HeaderMapper` for unseen layouts (interface in place, capped below rule confidence)
 - [ ] T-12 operating statement support
 - [ ] Multi-user: authentication, roles, shared templates

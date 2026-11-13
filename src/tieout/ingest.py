@@ -45,6 +45,7 @@ class Grid:
     sheet: str
     rows: list[list[Any]]
     sheets: list[str] = field(default_factory=list)  # every sheet in the workbook
+    row_sheets: list[str] = field(default_factory=list)  # PDFs: the page each row came from
     # (min_row, min_col, max_row, max_col), 0-based inclusive
     merges: list[tuple[int, int, int, int]] = field(default_factory=list)
     # cells that hold a formula whose result was never calculated and saved
@@ -75,14 +76,15 @@ class Grid:
         return (r, c) in self.uncomputed
 
     def ref(self, r: int, c: int) -> SourceRef:
-        return SourceRef(self.file, self.sheet, r + 1, c + 1)
+        sheet = self.row_sheets[r] if r < len(self.row_sheets) else self.sheet
+        return SourceRef(self.file, sheet, r + 1, c + 1)
 
 
 class UnsupportedFormat(ValueError):
     pass
 
 
-SUPPORTED_SUFFIXES = {".xlsx", ".xlsm", ".csv", ".tsv", ".txt"}
+SUPPORTED_SUFFIXES = {".xlsx", ".xlsm", ".csv", ".tsv", ".txt", ".pdf"}
 
 
 def read_grid(path: str | Path, sheet: str | None = None, name: str | None = None) -> Grid:
@@ -96,6 +98,11 @@ def read_grid(path: str | Path, sheet: str | None = None, name: str | None = Non
         grid = _read_delimited(path)
         if name:
             grid.sheet = Path(name).stem
+    elif suffix == ".pdf":
+        from tieout.pdf import read_pdf_rows
+
+        rows, pages = read_pdf_rows(path)
+        grid = Grid(file=path.name, sheet="PDF", rows=_trim(rows), row_sheets=pages)
     else:
         grid = _unsupported(suffix)
     if name:
@@ -104,10 +111,6 @@ def read_grid(path: str | Path, sheet: str | None = None, name: str | None = Non
 
 
 def _unsupported(suffix: str) -> Grid:
-    if suffix == ".pdf":
-        raise UnsupportedFormat(
-            "PDF input is not wired up yet. Planned: parse with Docling, then feed tables through this pipeline."
-        )
     if suffix == ".xls":
         raise UnsupportedFormat("Legacy .xls is not supported; re-save the file as .xlsx.")
     raise UnsupportedFormat(f"Unsupported file type: {suffix or '(none)'}")

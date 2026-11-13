@@ -7,7 +7,7 @@ import { go } from "../lib/route";
 import type { Job } from "../lib/types";
 import { Button, Empty, ErrorNote, Panel } from "./ui";
 
-const ACCEPT = ".xlsx,.xlsm,.csv,.tsv,.txt";
+const ACCEPT = ".xlsx,.xlsm,.csv,.tsv,.txt,.pdf";
 
 export function JobsPage() {
   const jobs = useQuery({ queryKey: ["jobs"], queryFn: api.jobs });
@@ -75,8 +75,8 @@ function Upload() {
         }`}
       >
         <div className="min-w-0 flex-1">
-          <p className="font-medium">{upload.isPending ? "Reading the file…" : "Drop an Excel or CSV rent roll here"}</p>
-          <p className="text-sm text-ink-3">.xlsx, .xlsm, .csv up to 25 MB. The original file is never changed.</p>
+          <p className="font-medium">{upload.isPending ? "Reading the file…" : "Drop a rent roll here: Excel, CSV or PDF"}</p>
+          <p className="text-sm text-ink-3">Up to 25 MB. PDFs need a text layer (not a scan). The original file is never changed.</p>
         </div>
         <label className="flex items-center gap-2 text-sm text-ink-2">
           Report date

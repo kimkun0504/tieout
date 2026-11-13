@@ -14,11 +14,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-server = ["fastapi>=0.110", "uvicorn[standard]>=0.27", "python-multipart>=0.0.9"]
+pdf = ["pdfplumber>=0.11"]
+server = ["tieout[pdf]", "fastapi>=0.110", "uvicorn[standard]>=0.27", "python-multipart>=0.0.9"]
 dev = [
     "tieout[server]",
     "pytest>=7",
     "hypothesis>=6.100",
+    "reportlab>=4",
     "httpx>=0.27",
     "ruff>=0.5",
     "mypy>=1.10",
@@ -61,5 +63,5 @@ warn_unreachable = true
 files = ["src/tieout"]
 
 [[tool.mypy.overrides]]
-module = ["openpyxl.*"]
+module = ["openpyxl.*", "pdfplumber.*"]
 ignore_missing_imports = true

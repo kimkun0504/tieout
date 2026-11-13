@@ -198,3 +198,42 @@ def make_charge_lines_xlsx(path: Path) -> Path:
     ws.append(["Total", None, 3500, None, None, 7200, None, 5010])
     wb.save(path)
     return path
+
+
+def make_pdf_rent_roll(path: Path, ruled: bool = True) -> Path:
+    """A two-page PDF export: title, a table split across pages with the
+    header repeated, page footers, and a grand total. `ruled=False` draws no
+    grid lines, like many property-management PDF exports."""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import landscape, letter
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Table, TableStyle
+
+    header = ["Unit", "Type", "Sq Ft", "Resident", "Status", "Market Rent", "Rent", "Lease From", "Lease To"]
+    units = [
+        ["C101", "1x1", "680", "Novak, Petra", "Occupied", "1,525.00", "1,500.00", "02/01/2026", "01/31/2027"],
+        ["C102", "1x1", "680", "VACANT", "Vacant", "1,525.00", "0.00", "", ""],
+        ["C103", "2x1", "910", "Haddad, Omar", "Occupied", "1,875.00", "1,850.00", "05/01/2026", "04/30/2027"],
+        ["C104", "2x2", "1,020", "Lindqvist, Mia", "Notice", "2,050.00", "1,995.00", "09/01/2025", "08/31/2026"],
+        ["C105", "2x2", "1,020", "Osei, Kwame", "Occupied", "2,050.00", "2,050.00", "11/01/2026", "10/31/2027"],
+        ["C106", "1x1", "680", "Reyes, Ana", "Occupied", "1,525.00", "1,475.00", "07/15/2026", "07/14/2027"],
+    ]
+    total = ["Total", "", "4,990", "", "", "10,550.00", "8,870.00", "", ""]
+    style = getSampleStyleSheet()
+    ts = [("FONTSIZE", (0, 0), (-1, -1), 9), ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold")]
+    if ruled:
+        ts.append(("GRID", (0, 0), (-1, -1), 0.5, colors.grey))
+
+    def footer(canvas, doc):
+        canvas.setFont("Helvetica", 8)
+        canvas.drawString(36, 20, f"Page {doc.page} of 2")
+
+    doc = SimpleDocTemplate(str(path), pagesize=landscape(letter))
+    story = [
+        Paragraph("Cedar Row Apartments - Rent Roll", style["Title"]),
+        Table([header, *units[:3]], style=TableStyle(ts)),
+        PageBreak(),
+        Table([header, *units[3:], total], style=TableStyle(ts)),
+    ]
+    doc.build(story, onFirstPage=footer, onLaterPages=footer)
+    return path
