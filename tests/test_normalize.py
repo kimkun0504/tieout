@@ -30,6 +30,7 @@ D = Decimal
         ("100.00-", D("-100.00")),
         ("100.00 CR", D("-100.00")),
         ("1,300.00 USD", D("1300.00")),
+        ("US$1,300.00", D("1300.00")),
         ("1,250 / mo", D("1250.00")),
         (".50", D("0.50")),
         (1450, D("1450.00")),
@@ -42,7 +43,9 @@ def test_money_parses_valid_amounts(raw, expected):
     assert parse_money(raw) == (expected, None)
 
 
-@pytest.mark.parametrize("raw", ["Paid thru 10/31", "See note 3", "1,425.00 2", "12,34,5", "1.2.3", "abc"])
+@pytest.mark.parametrize(
+    "raw", ["Paid thru 10/31", "See note 3", "1,425.00 2", "12,34,5", "1.2.3", "abc", "us 0", "US 100"]
+)
 def test_money_rejects_text_that_merely_contains_digits(raw):
     value, issue = parse_money(raw)
     assert value is None and issue

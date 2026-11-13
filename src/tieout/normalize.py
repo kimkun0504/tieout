@@ -31,7 +31,7 @@ _EMPTY_TOKENS = {"-", "--", "—", "–", "n/a", "na", "none", "nil"}
 # optional decimals, optional trailing sign or CR. Parentheses handled separately.
 _MONEY_RE = re.compile(
     r"""^(?P<sign>[-+])?\s*
-        (?:US)?\$?\s*
+        (?:US\$|\$)?\s*
         (?P<sign2>-)?\s*
         (?P<num>\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?|\.\d+)
         \s*(?P<trail>-|CR)?
