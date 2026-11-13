@@ -63,6 +63,16 @@ def to_payload(result: CleanResult) -> dict[str, Any]:
             "sheets": result.sheets,
             "header_rows": [r + 1 for r in result.header.header_rows],
         },
+        "as_of": result.as_of.isoformat() if result.as_of else None,
+        "report_date": (
+            {
+                "value": result.report_date.value.isoformat(),
+                "cell": result.report_date.ref.to_dict(),
+                "text": result.report_date.text,
+            }
+            if result.report_date
+            else None
+        ),
         "ok": result.ok,
         "summary": result.summary(),
         "metrics": result.metrics(),

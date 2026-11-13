@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from tieout import validate
-from tieout.detect import HeaderInfo, RowKind, classify_rows, detect_header
+from tieout.detect import HeaderInfo, ReportDate, RowKind, classify_rows, detect_header, find_report_date
 from tieout.ingest import Grid, read_grid
 from tieout.mapping import ColumnMapping, HeaderMapper, TemplateStore, map_columns
 from tieout.metrics import compute_metrics
@@ -45,6 +45,7 @@ class CleanResult:
     review: Review = dc_field(default_factory=Review)
     as_of: date | None = None
     sheets: list[str] = dc_field(default_factory=list)
+    report_date: ReportDate | None = None  # the date printed in the file's title rows, if any
 
     @property
     def open_issues(self) -> list[Issue]:
@@ -98,6 +99,7 @@ def clean_file(
     if grid is None:
         grid = read_grid(path, sheet, source_name)
     header = detect_header(grid)
+    report_date = find_report_date(grid, header)
 
     mappings = templates.load(header.headers) if templates else None
     if mappings is None:
@@ -155,11 +157,35 @@ def clean_file(
                 )
             )
 
+    if report_date and as_of and as_of != report_date.value:
+        extra_issues.append(
+            Issue(
+                Severity.WARNING,
+                "report_date_differs",
+                f"The report date set for this review ({as_of:%m/%d/%Y}) differs from the date in the file "
+                f"({report_date.value:%m/%d/%Y}, {report_date.ref.cell}). Lease-expiry checks use "
+                f"{as_of:%m/%d/%Y}.",
+                refs=[report_date.ref],
+            )
+        )
+    as_of = as_of or (report_date.value if report_date else None)
+
     issues = validate.run_all(rows, totals, mappings, as_of) + extra_issues
     for issue in issues:
         issue.acknowledgment = review.ack_for(issue.id)
     return CleanResult(
-        grid.file, grid.sheet, header, mappings, rows, totals, issues, skipped, review, as_of, list(grid.sheets)
+        grid.file,
+        grid.sheet,
+        header,
+        mappings,
+        rows,
+        totals,
+        issues,
+        skipped,
+        review,
+        as_of,
+        list(grid.sheets),
+        report_date,
     )
 
 

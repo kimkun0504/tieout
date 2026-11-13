@@ -10,11 +10,13 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from dataclasses import field as dc_field
+from datetime import date, datetime
 from enum import Enum
 from typing import Any
 
-from tieout.ingest import Grid
+from tieout.ingest import Grid, SourceRef
 from tieout.mapping import MIN_CONFIDENCE, norm_header, score_header
+from tieout.normalize import parse_date
 from tieout.schema import RENT_ROLL_FIELDS
 
 SCAN_ROWS = 40
@@ -178,3 +180,79 @@ def classify_rows(
 
         out.append(ClassifiedRow(r, RowKind.DATA, section))
     return out
+
+
+# --- report date ------------------------------------------------------------
+
+# Labels ranked by how surely they name the date the roll describes. A "printed" or
+# "run" date is when the report was generated, not what it covers, so it never counts.
+_DATE_LABELS: list[tuple[int, re.Pattern[str]]] = [
+    (3, re.compile(r"\bas[\s-]*of(?:\s+date)?\b", re.I)),
+    (2, re.compile(r"\b(?:report|effective|statement)\s+date\b|\bperiod\s+end(?:ing|ed)?\b|\bdated\b", re.I)),
+]
+_NOT_REPORT_DATE = re.compile(r"\b(?:print(?:ed)?|run|generated|created|exported|downloaded)\b", re.I)
+_DATE_IN_TEXT = re.compile(
+    r"\d{4}-\d{2}-\d{2}"
+    r"|\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}"
+    r"|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}"
+    r"|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?,?\s+\d{4}",
+    re.I,
+)
+TITLE_ROWS = 15  # report titles sit above the header, within the first few rows
+
+
+@dataclass
+class ReportDate:
+    value: date
+    ref: SourceRef
+    text: str  # the cell text it was read from, for the reviewer
+
+
+def _as_date(v: Any) -> date | None:
+    if isinstance(v, datetime):
+        return v.date()
+    if isinstance(v, date):
+        return v
+    if isinstance(v, str):
+        m = _DATE_IN_TEXT.search(v)
+        if m:
+            parsed, problem = parse_date(m.group(0))
+            if isinstance(parsed, date) and problem is None:
+                return parsed
+    return None
+
+
+def find_report_date(grid: Grid, header: HeaderInfo | None = None) -> ReportDate | None:
+    """The "as of" date printed in the title rows above the header, if there is exactly one.
+
+    Reads "As of 10/31/2026", "As Of = 10/31/2026" (Yardi), "Report Date: Oct 31, 2026", or a
+    label cell followed by a date cell. Printed/run dates are ignored. Returns None when no
+    labelled date is found or the best-ranked labels disagree, so a guess never stands in
+    for the reviewer's own report date.
+    """
+    stop = min(header.header_rows[0] if header and header.header_rows else TITLE_ROWS, TITLE_ROWS)
+    found: list[tuple[int, date, int, int, str]] = []  # rank, date, row, col, text
+    for r in range(stop):
+        row = grid.rows[r] if r < len(grid.rows) else []
+        for c, v in enumerate(row):
+            if not isinstance(v, str) or not v.strip() or _NOT_REPORT_DATE.search(v):
+                continue
+            hit = next(((rk, m) for rk, pat in _DATE_LABELS if (m := pat.search(v))), None)
+            if hit is None:
+                continue
+            rank, label = hit
+            d = _as_date(v[label.end() :])
+            if d is None:  # label alone; the date is in the next filled cell on the row
+                nxt = next(((j, row[j]) for j in range(c + 1, len(row)) if row[j] not in (None, "")), None)
+                if nxt is not None:
+                    d = _as_date(nxt[1])
+            if d is not None and 1990 <= d.year <= 2100:
+                found.append((rank, d, r, c, v.strip()))
+    if not found:
+        return None
+    best = max(f[0] for f in found)
+    top = [f for f in found if f[0] == best]
+    if len({f[1] for f in top}) != 1:
+        return None
+    _, d, r, c, text = top[0]
+    return ReportDate(d, SourceRef(grid.file, grid.sheet, r + 1, c + 1), text[:120])

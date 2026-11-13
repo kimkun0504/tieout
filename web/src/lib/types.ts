@@ -149,6 +149,8 @@ export interface Result {
   document_type?: "rent_roll";
   tieout_version: string;
   source: { file: string; sheet: string; sheets: string[]; header_rows: number[] };
+  as_of?: string | null;
+  report_date?: { value: string; cell: SourceRef; text: string } | null;
   ok: boolean;
   summary: Summary;
   metrics: Metrics;

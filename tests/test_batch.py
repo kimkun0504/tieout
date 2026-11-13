@@ -45,6 +45,7 @@ def test_batch_cleans_each_file_and_records_failures(tmp_path):
     assert int(rows["2025/oak t12.xlsx"]["errors"]) >= 1
     assert rows["Oak Court.xlsx"]["document_type"] == "rent_roll"
     assert int(rows["Oak Court.xlsx"]["units_or_lines"]) > 0
+    assert rows["Oak Court.xlsx"]["as_of"] == "2026-10-31"  # read from the title rows
     assert rows["maple.csv"]["status"] == "needs review"
 
     # same stem in two folders must not overwrite each other's outputs

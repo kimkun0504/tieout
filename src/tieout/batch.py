@@ -21,6 +21,7 @@ SUMMARY_FIELDS = [
     "file",
     "document_type",
     "status",
+    "as_of",
     "units_or_lines",
     "errors",
     "warnings",
@@ -38,6 +39,7 @@ class BatchEntry:
     file: Path
     document_type: str = ""
     status: str = ""  # "ties out" | "needs review" | "failed"
+    as_of: date | None = None
     units_or_lines: int | None = None
     errors: int = 0
     warnings: int = 0
@@ -61,6 +63,7 @@ class BatchEntry:
             "file": rel(self.file),
             "document_type": self.document_type,
             "status": self.status,
+            "as_of": self.as_of.isoformat() if self.as_of else "",
             "units_or_lines": "" if self.units_or_lines is None else self.units_or_lines,
             "errors": self.errors,
             "warnings": self.warnings,
@@ -155,6 +158,7 @@ def run_batch(
                 write_all(res, dest)
                 s = res.summary()
                 entry.document_type = "rent_roll"
+                entry.as_of = res.as_of
                 entry.units_or_lines = s["units"]
                 entry.occupancy = s["physical_occupancy"]
                 entry.total_current_rent = s["total_current_rent"]

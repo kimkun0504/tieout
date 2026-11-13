@@ -1,4 +1,5 @@
 {
+  "as_of": "2026-11-01",
   "document_type": "rent_roll",
   "fields": [
     {
@@ -379,6 +380,7 @@
     "vacant_units": 1
   },
   "ok": false,
+  "report_date": null,
   "review": {
     "acknowledgments": [],
     "audit": [],

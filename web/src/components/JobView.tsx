@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import { useJob, useJobAction } from "../lib/hooks";
+import { fmtDate } from "../lib/format";
 import { go } from "../lib/route";
 import { NONE, type Selection } from "../lib/selection";
 import type { ExportFormat, JobResponse, T12Response } from "../lib/types";
@@ -178,6 +179,8 @@ function JobHeader({ data }: { data: JobResponse }) {
     api.settings(job.id, next),
   );
   const s = result.summary;
+  const fileDate = result.report_date ?? null;
+  const shownDate = job.as_of ?? fileDate?.value ?? "";
   return (
     <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
       <div className="min-w-0">
@@ -210,15 +213,25 @@ function JobHeader({ data }: { data: JobResponse }) {
         <label className="flex flex-col text-sm text-ink-2">
           Report date
           <input
-            key={job.as_of ?? ""}
+            key={shownDate}
             type="date"
-            defaultValue={job.as_of ?? ""}
+            defaultValue={shownDate}
+            aria-describedby="report-date-source"
             onBlur={(e) => {
               const v = e.target.value || null;
-              if (v !== job.as_of) settings.mutate({ sheet: job.sheet, as_of: v });
+              if ((v ?? "") !== shownDate) settings.mutate({ sheet: job.sheet, as_of: v });
             }}
             className="rounded border border-rule bg-surface px-2 py-1 text-ink"
           />
+          <span id="report-date-source" className="text-xs text-ink-3">
+            {job.as_of
+              ? fileDate && fileDate.value !== job.as_of
+                ? `File says ${fmtDate(fileDate.value)} (${fileDate.cell.cell})`
+                : "Set by you"
+              : fileDate
+                ? `Read from cell ${fileDate.cell.cell}`
+                : "Not in the file; set one to check expiries"}
+          </span>
         </label>
         {result.source.sheets.length > 1 && (
           <label className="flex flex-col text-sm text-ink-2">
