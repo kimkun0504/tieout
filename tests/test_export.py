@@ -1,6 +1,8 @@
 import csv
 import json
 
+import pytest
+
 from tieout import clean_file
 from tieout.export import write_all
 
@@ -116,3 +118,35 @@ def test_outputs_are_utf8_whatever_the_platform_default(tmp_path):
         paths[key].read_bytes().decode("utf-8")  # raises if written in a legacy code page
     assert "李小龍" in paths["csv"].read_text(encoding="utf-8")
     assert "Zoë Ångström" in paths["jsonl"].read_text(encoding="utf-8")
+
+
+def test_datapackage_describes_the_csvs_with_types(tmp_path):
+    import csv as _csv
+    import json as _json
+
+    from samples import make_flat_csv_with_problems
+    from tieout.export import write_all
+    from tieout.pipeline import clean_file
+
+    paths = write_all(clean_file(make_flat_csv_with_problems(tmp_path / "f.csv")), tmp_path / "out")
+    pkg = _json.loads(paths["datapackage"].read_text(encoding="utf-8"))
+    units, issues = pkg["resources"]
+    assert units["path"] == paths["csv"].name and issues["path"] == paths["issues"].name
+    with paths["csv"].open(encoding="utf-8", newline="") as fh:
+        header = next(_csv.reader(fh))
+    assert [f["name"] for f in units["schema"]["fields"]] == header
+    types = {f["name"]: f["type"] for f in units["schema"]["fields"]}
+    assert types["current_rent"] == "number" and types["lease_end"] == "date" and types["source_row"] == "integer"
+    assert pkg["tieout"]["ties_out"] is False and pkg["tieout"]["open_errors"] > 0
+
+
+def test_datapackage_validates_with_frictionless(tmp_path):
+    frictionless = pytest.importorskip("frictionless")
+    from samples import make_charge_lines_xlsx, make_stacked_header_xlsx
+    from tieout.export import write_all
+    from tieout.pipeline import clean_file
+
+    for make, name in ((make_stacked_header_xlsx, "m.xlsx"), (make_charge_lines_xlsx, "c.xlsx")):
+        paths = write_all(clean_file(make(tmp_path / name)), tmp_path / name.split(".")[0])
+        report = frictionless.Package(str(paths["datapackage"])).validate()
+        assert report.valid, [e.message for t in report.tasks for e in t.errors]

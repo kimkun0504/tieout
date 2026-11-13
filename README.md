@@ -48,7 +48,7 @@ docker run -p 8000:8000 -v tieout-data:/data tieout
 | Column mapping | Change how a column is read; save the mapping as a template for that export format |
 | Changes | Who corrected, accepted or remapped what, and when |
 
-Exports: Excel workbook (Rent Roll, Issues, Summary), CSV, JSON with full provenance, issues CSV, Markdown report, and **records for AI** (JSONL): one record per unit with plain-sentence text for embedding, typed fields, and metadata tracing every value to its cell, with an option to remove tenant names.
+Exports: Excel workbook (Rent Roll, Issues, Summary), CSV, JSON with full provenance, issues CSV, Markdown report, and **records for AI** (JSONL): one record per unit with plain-sentence text for embedding, typed fields, and metadata tracing every value to its cell, with an option to remove tenant names. The command line also writes a [Frictionless Data Package](https://datapackage.org/) (`*.datapackage.json`) describing both CSVs with typed fields, so pandas, DuckDB and data catalogs load them without guessing types. All text files are UTF-8.
 
 The app is a single-user local tool: it binds to `127.0.0.1` and has no authentication. Put it behind an authenticating proxy before exposing it to a network. Built-in protections: it answers only to known host names (`TIEOUT_ALLOWED_HOSTS`, default `localhost,127.0.0.1`) against DNS rebinding, refuses state-changing requests from other websites (CSRF), sends a strict Content-Security-Policy and related headers, limits uploads to 25 MB, refuses zip-bomb workbooks, and writes CSV/Excel exports so cell text can never run as a formula.
 

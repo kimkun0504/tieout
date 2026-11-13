@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -33,6 +33,7 @@ def write_all(result: CleanResult, out_dir: str | Path) -> dict[str, Path]:
         "report": out / f"{stem}.report.md",
         "xlsx": out / f"{stem}.clean.xlsx",
         "jsonl": out / f"{stem}.records.jsonl",
+        "datapackage": out / f"{stem}.datapackage.json",
     }
     write_jsonl(result, paths["jsonl"])
     write_xlsx(result, paths["xlsx"])
@@ -40,6 +41,7 @@ def write_all(result: CleanResult, out_dir: str | Path) -> dict[str, Path]:
     write_json(result, paths["json"])
     write_issues(result, paths["issues"])
     paths["report"].write_text(render_report(result), encoding="utf-8")
+    write_datapackage(result, paths["datapackage"], paths["csv"].name, paths["issues"].name)
     return paths
 
 
@@ -129,6 +131,109 @@ def _computed_total(result: CleanResult, scope: list[int], name: str) -> str:
 
 def write_json(result: CleanResult, path: Path) -> None:
     path.write_text(json.dumps(to_payload(result), indent=2, default=str, ensure_ascii=False), encoding="utf-8")
+
+
+_TABLE_TYPES = {
+    FieldType.TEXT: "string",
+    FieldType.STATUS: "string",
+    FieldType.MONEY: "number",
+    FieldType.NUMBER: "number",
+    FieldType.DATE: "date",
+}
+
+
+def to_datapackage(result: CleanResult, csv_name: str, issues_name: str) -> dict[str, Any]:
+    """A Frictionless Data Package describing the clean CSV and the issues CSV.
+
+    Lets pandas, DuckDB, Frictionless, CKAN and data catalogs load the files with
+    the right types instead of guessing, and records where the data came from.
+    """
+    from tieout.schema import STATUS_VALUES
+
+    def field(name: str) -> dict[str, Any]:
+        spec = FIELDS_BY_NAME[name]
+        f: dict[str, Any] = {"name": name, "type": _TABLE_TYPES[spec.type], "description": spec.description}
+        if spec.type is FieldType.MONEY:
+            f["description"] += " (USD, two decimals)"
+        if name == "unit":  # every unit row has one; rent may be blank (vacant units)
+            f["constraints"] = {"required": True}
+        if spec.type is FieldType.STATUS:
+            f["constraints"] = {"enum": list(STATUS_VALUES)}
+        return f
+
+    s = result.summary()
+    stem = Path(csv_name).name.split(".")[0]
+    slug = "".join(ch if ch.isalnum() else "-" for ch in stem.lower()).strip("-") or "rent-roll"
+    return {
+        "profile": "tabular-data-package",
+        "name": slug,
+        "title": f"Rent roll: {result.source_file}",
+        "created": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "sources": [{"title": result.source_file, "path": result.source_file}],
+        "tieout": {
+            "version": __version__,
+            "sheet": result.sheet,
+            "as_of": result.as_of.isoformat() if result.as_of else None,
+            "ties_out": result.ok,
+            "open_errors": s["errors"],
+            "open_warnings": s["warnings"],
+            "accepted": s["acknowledged"],
+            "corrections": s["corrections"],
+        },
+        "resources": [
+            {
+                "name": "units",
+                "path": csv_name,
+                "profile": "tabular-data-resource",
+                "format": "csv",
+                "mediatype": "text/csv",
+                "encoding": "utf-8",
+                "schema": {
+                    "fields": [
+                        *(field(c) for c in COLUMNS),
+                        {"name": "section", "type": "string", "description": "Section or building label"},
+                        {
+                            "name": "source_row",
+                            "type": "integer",
+                            "description": "Row in the original file this unit came from",
+                            "constraints": {"required": True, "minimum": 1},
+                        },
+                    ],
+                    "missingValues": [""],
+                    "primaryKey": ["source_row"],
+                },
+            },
+            {
+                "name": "issues",
+                "path": issues_name,
+                "profile": "tabular-data-resource",
+                "format": "csv",
+                "mediatype": "text/csv",
+                "encoding": "utf-8",
+                "schema": {
+                    "fields": [
+                        {"name": "id", "type": "string"},
+                        {"name": "severity", "type": "string", "constraints": {"enum": ["error", "warning", "info"]}},
+                        {"name": "status", "type": "string", "constraints": {"enum": ["open", "accepted"]}},
+                        {"name": "rule", "type": "string"},
+                        {"name": "row", "type": "integer"},
+                        {"name": "field", "type": "string"},
+                        {"name": "cells", "type": "string", "description": "Source cells, space separated"},
+                        {"name": "message", "type": "string"},
+                        {"name": "note", "type": "string", "description": "Reviewer's note when accepted"},
+                    ],
+                    "missingValues": [""],
+                    "primaryKey": ["id"],
+                },
+            },
+        ],
+    }
+
+
+def write_datapackage(result: CleanResult, path: Path, csv_name: str, issues_name: str) -> None:
+    path.write_text(
+        json.dumps(to_datapackage(result, csv_name, issues_name), indent=2, ensure_ascii=False), encoding="utf-8"
+    )
 
 
 def write_issues(result: CleanResult, path: Path) -> None:
