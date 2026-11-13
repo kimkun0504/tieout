@@ -7,6 +7,7 @@ looks right is worse than a blank that gets reviewed.
 
 from __future__ import annotations
 
+import math
 import re
 from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
@@ -20,6 +21,8 @@ from tieout.schema import FieldType
 _EXCEL_EPOCH = date(1899, 12, 30)
 _SERIAL_MIN, _SERIAL_MAX = 20000, 80000  # 1954-10-03 .. 2119-01-10
 CENT = Decimal("0.01")
+# No rent roll amount is anywhere near this; larger values are corrupt cells.
+MAX_AMOUNT = Decimal("1000000000000")
 
 _VACANT_PREFIXES = ("vacant", "vacancy", "available", "unrented", "unoccupied")
 _EMPTY_TOKENS = {"-", "--", "—", "–", "n/a", "na", "none", "nil"}
@@ -70,9 +73,10 @@ def parse_money(value: Any) -> Parsed:
     if isinstance(value, bool):
         return None, f"expected an amount, got {value!r}"
     if isinstance(value, (int, float, Decimal)):
-        if isinstance(value, float) and value != value:  # NaN
-            return None, "amount is not a number"
-        return to_cents(Decimal(str(value))), None
+        d = Decimal(str(value))
+        if not d.is_finite():
+            return None, "amount is not a finite number"
+        return _checked_amount(d, value)
     s = " ".join(str(value).split())
     if s.lower() in _EMPTY_TOKENS:
         return None, None
@@ -88,10 +92,16 @@ def parse_money(value: Any) -> Parsed:
     if m.group("sign") == "-" or m.group("sign2") or m.group("trail"):
         negative = True  # "(100)", "-100", "100-" and "100 CR" all mean a credit
     try:
-        amount = to_cents(Decimal(m.group("num").replace(",", "")))
+        raw_amount = Decimal(m.group("num").replace(",", ""))
     except InvalidOperation:
         return None, f"could not read amount {value!r}"
-    return (-amount if negative else amount), None
+    return _checked_amount(-raw_amount if negative else raw_amount, value)
+
+
+def _checked_amount(d: Decimal, original: Any) -> Parsed:
+    if abs(d) >= MAX_AMOUNT:
+        return None, f"amount {original!r} is implausibly large"
+    return to_cents(d), None
 
 
 def parse_number(value: Any) -> Parsed:
@@ -99,8 +109,8 @@ def parse_number(value: Any) -> Parsed:
         return None, f"expected a number, got {value!r}"
     if isinstance(value, (int, float, Decimal)):
         n = float(value)
-        if n != n:
-            return None, "number is NaN"
+        if not math.isfinite(n):
+            return None, "number is not finite"
         return (int(n) if n.is_integer() else n), None
     s = re.sub(r"\s*(?:sq\.?\s*ft\.?|sf|rsf)\s*$", "", str(value).strip(), flags=re.I).strip()
     if s.lower() in _EMPTY_TOKENS:
@@ -108,6 +118,8 @@ def parse_number(value: Any) -> Parsed:
     if not _NUMBER_RE.match(s):
         return None, f"could not read number {str(value)!r}"
     n = float(s.replace(",", ""))
+    if not math.isfinite(n) or abs(n) >= float(MAX_AMOUNT):
+        return None, f"number {str(value)!r} is implausibly large"
     return (int(n) if n.is_integer() else n), None
 
 
@@ -173,9 +185,12 @@ def _from_serial(n: float) -> Parsed:
 
 
 def parse_status(value: Any) -> Parsed:
-    s = " ".join(str(value).strip().lower().replace("-", " ").replace("_", " ").split())
-    if not s:
+    original = str(value).strip().lower()
+    if not original or original in _EMPTY_TOKENS:
         return None, None
+    s = " ".join(original.replace("-", " ").replace("_", " ").split())
+    if not s:
+        return None, f"unknown status {value!r}"
     words = set(s.split())
     # Notice must be checked before occupied: "Occupied NTV" is a notice unit.
     if ("ntv" in words or "notice" in words) and "no notice" not in s:

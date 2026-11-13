@@ -1,0 +1,1327 @@
+{
+  "fields": [
+    {
+      "description": "Unit or suite identifier",
+      "name": "unit",
+      "type": "text"
+    },
+    {
+      "description": "Floor plan or bed/bath type",
+      "name": "unit_type",
+      "type": "text"
+    },
+    {
+      "description": "Rentable square feet",
+      "name": "sqft",
+      "type": "number"
+    },
+    {
+      "description": "Tenant or resident name",
+      "name": "tenant",
+      "type": "text"
+    },
+    {
+      "description": "occupied / vacant / notice / model / down",
+      "name": "status",
+      "type": "status"
+    },
+    {
+      "description": "Market or asking monthly rent",
+      "name": "market_rent",
+      "type": "money"
+    },
+    {
+      "description": "Rent actually charged per month",
+      "name": "current_rent",
+      "type": "money"
+    },
+    {
+      "description": "Monthly concessions or discounts (usually negative)",
+      "name": "concessions",
+      "type": "money"
+    },
+    {
+      "description": "Recurring non-rent charges (parking, pet, storage, utilities)",
+      "name": "other_charges",
+      "type": "money"
+    },
+    {
+      "description": "All recurring monthly charges for the unit",
+      "name": "total_charges",
+      "type": "money"
+    },
+    {
+      "description": "Security deposit held",
+      "name": "deposit",
+      "type": "money"
+    },
+    {
+      "description": "Move-in date",
+      "name": "move_in",
+      "type": "date"
+    },
+    {
+      "description": "Lease start date",
+      "name": "lease_start",
+      "type": "date"
+    },
+    {
+      "description": "Lease end date",
+      "name": "lease_end",
+      "type": "date"
+    }
+  ],
+  "issues": [
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "status",
+      "id": "a5ee3b7a3543",
+      "message": "No status column: occupancy is inferred from tenant names; please confirm.",
+      "row": null,
+      "rule": "status_inferred",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "sqft",
+      "id": "7ba264579062",
+      "message": "'Total Building A' sq ft of 2,280 ties out to its 3 units.",
+      "row": 11,
+      "rule": "total_ties_out",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "market_rent",
+      "id": "384ac002c05c",
+      "message": "'Total Building A' market rent of 4,795.00 ties out to its 3 units.",
+      "row": 11,
+      "rule": "total_ties_out",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "current_rent",
+      "id": "10a88727406a",
+      "message": "'Total Building A' rent of 3,275.00 ties out to its 3 units.",
+      "row": 11,
+      "rule": "total_ties_out",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "deposit",
+      "id": "1018b3575827",
+      "message": "'Total Building A' deposit of 1,250.00 ties out to its 3 units.",
+      "row": 11,
+      "rule": "total_ties_out",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "sqft",
+      "id": "4380a57ababe",
+      "message": "'Total Building B' sq ft of 1,865 ties out to its 2 units.",
+      "row": 16,
+      "rule": "total_ties_out",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "market_rent",
+      "id": "b94fb321c2b5",
+      "message": "'Total Building B' market rent of 3,550.00 ties out to its 2 units.",
+      "row": 16,
+      "rule": "total_ties_out",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "current_rent",
+      "id": "f9cc21850ea1",
+      "message": "'Total Building B' rent of 3,500.00 ties out to its 2 units.",
+      "row": 16,
+      "rule": "total_ties_out",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "deposit",
+      "id": "ac3124100933",
+      "message": "'Total Building B' deposit of 1,350.00 ties out to its 2 units.",
+      "row": 16,
+      "rule": "total_ties_out",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "sqft",
+      "id": "849c882baae8",
+      "message": "'Grand Total' sq ft of 4,145 ties out to its 5 units.",
+      "row": 17,
+      "rule": "total_ties_out",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "market_rent",
+      "id": "05c5abe326dc",
+      "message": "'Grand Total' market rent of 8,345.00 ties out to its 5 units.",
+      "row": 17,
+      "rule": "total_ties_out",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "current_rent",
+      "id": "63916bd69444",
+      "message": "'Grand Total' rent of 6,775.00 ties out to its 5 units.",
+      "row": 17,
+      "rule": "total_ties_out",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "deposit",
+      "id": "cc71ab27dc89",
+      "message": "'Grand Total' deposit of 2,600.00 ties out to its 5 units.",
+      "row": 17,
+      "rule": "total_ties_out",
+      "severity": "info"
+    }
+  ],
+  "mappings": [
+    {
+      "column": 1,
+      "confidence": 1.0,
+      "field": "unit",
+      "header": "Unit",
+      "method": "synonym"
+    },
+    {
+      "column": 2,
+      "confidence": 1.0,
+      "field": "unit_type",
+      "header": "Unit Type",
+      "method": "synonym"
+    },
+    {
+      "column": 3,
+      "confidence": 1.0,
+      "field": "sqft",
+      "header": "Sq. Ft.",
+      "method": "synonym"
+    },
+    {
+      "column": 4,
+      "confidence": 1.0,
+      "field": "tenant",
+      "header": "Resident",
+      "method": "synonym"
+    },
+    {
+      "column": 5,
+      "confidence": 1.0,
+      "field": "market_rent",
+      "header": "Market Rent",
+      "method": "synonym"
+    },
+    {
+      "column": 6,
+      "confidence": 1.0,
+      "field": "current_rent",
+      "header": "Actual Rent",
+      "method": "synonym"
+    },
+    {
+      "column": 7,
+      "confidence": 1.0,
+      "field": "deposit",
+      "header": "Deposit",
+      "method": "synonym"
+    },
+    {
+      "column": 8,
+      "confidence": 1.0,
+      "field": "lease_start",
+      "header": "Lease Start",
+      "method": "synonym"
+    },
+    {
+      "column": 9,
+      "confidence": 1.0,
+      "field": "lease_end",
+      "header": "Lease End",
+      "method": "synonym"
+    },
+    {
+      "column": 10,
+      "confidence": 1.0,
+      "field": "move_in",
+      "header": "Move In",
+      "method": "synonym"
+    }
+  ],
+  "metrics": {
+    "avg_in_place_rent": "1693.75",
+    "avg_market_rent": "1669.00",
+    "avg_rent_per_sqft": "1.94",
+    "concessions": null,
+    "economic_occupancy": 0.8119,
+    "gross_potential_rent": "8345.00",
+    "in_place_rent": "6775.00",
+    "lease_expirations": {
+      "after_12_months": 0,
+      "as_of": "2026-11-01",
+      "by_month": [
+        {
+          "month": "2026-11",
+          "rent": "1600.00",
+          "units": 1
+        },
+        {
+          "month": "2026-12",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-01",
+          "rent": "1425.00",
+          "units": 1
+        },
+        {
+          "month": "2027-02",
+          "rent": "1850.00",
+          "units": 1
+        },
+        {
+          "month": "2027-03",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-04",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-05",
+          "rent": "1900.00",
+          "units": 1
+        },
+        {
+          "month": "2027-06",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-07",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-08",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-09",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-10",
+          "rent": "0.00",
+          "units": 0
+        }
+      ],
+      "expired_or_mtm": 0,
+      "no_end_date": 0
+    },
+    "loss_to_lease": "120.00",
+    "loss_to_lease_pct": 0.0174,
+    "occupied_units": 4,
+    "physical_occupancy": 0.8,
+    "unit_mix": [
+      {
+        "avg_in_place_rent": "1425.00",
+        "avg_market_rent": "1450.00",
+        "avg_sqft": 650.0,
+        "occupancy": 0.5,
+        "occupied": 1,
+        "unit_type": "1x1",
+        "units": 2
+      },
+      {
+        "avg_in_place_rent": "1600.00",
+        "avg_market_rent": "1650.00",
+        "avg_sqft": 875.0,
+        "occupancy": 1.0,
+        "occupied": 1,
+        "unit_type": "2x1",
+        "units": 1
+      },
+      {
+        "avg_in_place_rent": "1875.00",
+        "avg_market_rent": "1897.50",
+        "avg_sqft": 985.0,
+        "occupancy": 1.0,
+        "occupied": 2,
+        "unit_type": "2x2",
+        "units": 2
+      }
+    ],
+    "units": 5,
+    "vacancy_loss": "1450.00",
+    "vacant_units": 1
+  },
+  "ok": true,
+  "review": {
+    "acknowledgments": [],
+    "audit": [],
+    "corrections": [],
+    "mapping_overrides": {},
+    "version": 1
+  },
+  "rows": [
+    {
+      "charges": [],
+      "fields": {
+        "current_rent": {
+          "derived": false,
+          "raw": "$1,425.00",
+          "source": {
+            "cell": "F8",
+            "col": 6,
+            "file": "maple_court.xlsx",
+            "row": 8,
+            "sheet": "Rent Roll"
+          },
+          "value": "1425.00"
+        },
+        "deposit": {
+          "derived": false,
+          "raw": 500,
+          "source": {
+            "cell": "G8",
+            "col": 7,
+            "file": "maple_court.xlsx",
+            "row": 8,
+            "sheet": "Rent Roll"
+          },
+          "value": "500.00"
+        },
+        "lease_end": {
+          "derived": false,
+          "raw": "2027-01-31T00:00:00",
+          "source": {
+            "cell": "I8",
+            "col": 9,
+            "file": "maple_court.xlsx",
+            "row": 8,
+            "sheet": "Rent Roll"
+          },
+          "value": "2027-01-31"
+        },
+        "lease_start": {
+          "derived": false,
+          "raw": "2026-02-01T00:00:00",
+          "source": {
+            "cell": "H8",
+            "col": 8,
+            "file": "maple_court.xlsx",
+            "row": 8,
+            "sheet": "Rent Roll"
+          },
+          "value": "2026-02-01"
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": "$1,450.00",
+          "source": {
+            "cell": "E8",
+            "col": 5,
+            "file": "maple_court.xlsx",
+            "row": 8,
+            "sheet": "Rent Roll"
+          },
+          "value": "1450.00"
+        },
+        "move_in": {
+          "derived": false,
+          "raw": "2024-02-01T00:00:00",
+          "source": {
+            "cell": "J8",
+            "col": 10,
+            "file": "maple_court.xlsx",
+            "row": 8,
+            "sheet": "Rent Roll"
+          },
+          "value": "2024-02-01"
+        },
+        "sqft": {
+          "derived": false,
+          "raw": 650,
+          "source": {
+            "cell": "C8",
+            "col": 3,
+            "file": "maple_court.xlsx",
+            "row": 8,
+            "sheet": "Rent Roll"
+          },
+          "value": 650
+        },
+        "status": {
+          "derived": true,
+          "raw": null,
+          "source": {
+            "cell": "D8",
+            "col": 4,
+            "file": "maple_court.xlsx",
+            "row": 8,
+            "sheet": "Rent Roll"
+          },
+          "value": "occupied"
+        },
+        "tenant": {
+          "derived": false,
+          "raw": "GARCIA, MARIA",
+          "source": {
+            "cell": "D8",
+            "col": 4,
+            "file": "maple_court.xlsx",
+            "row": 8,
+            "sheet": "Rent Roll"
+          },
+          "value": "Garcia, Maria"
+        },
+        "unit": {
+          "derived": false,
+          "raw": "101",
+          "source": {
+            "cell": "A8",
+            "col": 1,
+            "file": "maple_court.xlsx",
+            "row": 8,
+            "sheet": "Rent Roll"
+          },
+          "value": "101"
+        },
+        "unit_type": {
+          "derived": false,
+          "raw": "1x1",
+          "source": {
+            "cell": "B8",
+            "col": 2,
+            "file": "maple_court.xlsx",
+            "row": 8,
+            "sheet": "Rent Roll"
+          },
+          "value": "1x1"
+        }
+      },
+      "section": "Building A",
+      "source_row": 8
+    },
+    {
+      "charges": [],
+      "fields": {
+        "current_rent": {
+          "derived": false,
+          "raw": "0.00",
+          "source": {
+            "cell": "F9",
+            "col": 6,
+            "file": "maple_court.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": "0.00"
+        },
+        "deposit": {
+          "derived": false,
+          "raw": null,
+          "source": {
+            "cell": "G9",
+            "col": 7,
+            "file": "maple_court.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": null
+        },
+        "lease_end": {
+          "derived": false,
+          "raw": null,
+          "source": {
+            "cell": "I9",
+            "col": 9,
+            "file": "maple_court.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": null
+        },
+        "lease_start": {
+          "derived": false,
+          "raw": null,
+          "source": {
+            "cell": "H9",
+            "col": 8,
+            "file": "maple_court.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": null
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": "$1,450.00",
+          "source": {
+            "cell": "E9",
+            "col": 5,
+            "file": "maple_court.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": "1450.00"
+        },
+        "move_in": {
+          "derived": false,
+          "raw": null,
+          "source": {
+            "cell": "J9",
+            "col": 10,
+            "file": "maple_court.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": null
+        },
+        "sqft": {
+          "derived": false,
+          "raw": 650,
+          "source": {
+            "cell": "C9",
+            "col": 3,
+            "file": "maple_court.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": 650
+        },
+        "status": {
+          "derived": true,
+          "raw": "VACANT",
+          "source": {
+            "cell": "D9",
+            "col": 4,
+            "file": "maple_court.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": "vacant"
+        },
+        "tenant": {
+          "derived": false,
+          "raw": "VACANT",
+          "source": {
+            "cell": "D9",
+            "col": 4,
+            "file": "maple_court.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": null
+        },
+        "unit": {
+          "derived": false,
+          "raw": "102",
+          "source": {
+            "cell": "A9",
+            "col": 1,
+            "file": "maple_court.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": "102"
+        },
+        "unit_type": {
+          "derived": false,
+          "raw": "1x1",
+          "source": {
+            "cell": "B9",
+            "col": 2,
+            "file": "maple_court.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": "1x1"
+        }
+      },
+      "section": "Building A",
+      "source_row": 9
+    },
+    {
+      "charges": [],
+      "fields": {
+        "current_rent": {
+          "derived": false,
+          "raw": "1,850.00",
+          "source": {
+            "cell": "F10",
+            "col": 6,
+            "file": "maple_court.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "1850.00"
+        },
+        "deposit": {
+          "derived": false,
+          "raw": 750,
+          "source": {
+            "cell": "G10",
+            "col": 7,
+            "file": "maple_court.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "750.00"
+        },
+        "lease_end": {
+          "derived": false,
+          "raw": "2/28/2027",
+          "source": {
+            "cell": "I10",
+            "col": 9,
+            "file": "maple_court.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "2027-02-28"
+        },
+        "lease_start": {
+          "derived": false,
+          "raw": "3/1/2026",
+          "source": {
+            "cell": "H10",
+            "col": 8,
+            "file": "maple_court.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "2026-03-01"
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": "1,895.00",
+          "source": {
+            "cell": "E10",
+            "col": 5,
+            "file": "maple_court.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "1895.00"
+        },
+        "move_in": {
+          "derived": false,
+          "raw": "3/1/2025",
+          "source": {
+            "cell": "J10",
+            "col": 10,
+            "file": "maple_court.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "2025-03-01"
+        },
+        "sqft": {
+          "derived": false,
+          "raw": 980,
+          "source": {
+            "cell": "C10",
+            "col": 3,
+            "file": "maple_court.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": 980
+        },
+        "status": {
+          "derived": true,
+          "raw": null,
+          "source": {
+            "cell": "D10",
+            "col": 4,
+            "file": "maple_court.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "occupied"
+        },
+        "tenant": {
+          "derived": false,
+          "raw": "NGUYEN, DAVID",
+          "source": {
+            "cell": "D10",
+            "col": 4,
+            "file": "maple_court.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "Nguyen, David"
+        },
+        "unit": {
+          "derived": false,
+          "raw": "103",
+          "source": {
+            "cell": "A10",
+            "col": 1,
+            "file": "maple_court.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "103"
+        },
+        "unit_type": {
+          "derived": false,
+          "raw": "2x2",
+          "source": {
+            "cell": "B10",
+            "col": 2,
+            "file": "maple_court.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "2x2"
+        }
+      },
+      "section": "Building A",
+      "source_row": 10
+    },
+    {
+      "charges": [],
+      "fields": {
+        "current_rent": {
+          "derived": false,
+          "raw": 1600,
+          "source": {
+            "cell": "F14",
+            "col": 6,
+            "file": "maple_court.xlsx",
+            "row": 14,
+            "sheet": "Rent Roll"
+          },
+          "value": "1600.00"
+        },
+        "deposit": {
+          "derived": false,
+          "raw": 600,
+          "source": {
+            "cell": "G14",
+            "col": 7,
+            "file": "maple_court.xlsx",
+            "row": 14,
+            "sheet": "Rent Roll"
+          },
+          "value": "600.00"
+        },
+        "lease_end": {
+          "derived": false,
+          "raw": "2026-11-14T00:00:00",
+          "source": {
+            "cell": "I14",
+            "col": 9,
+            "file": "maple_court.xlsx",
+            "row": 14,
+            "sheet": "Rent Roll"
+          },
+          "value": "2026-11-14"
+        },
+        "lease_start": {
+          "derived": false,
+          "raw": "2025-11-15T00:00:00",
+          "source": {
+            "cell": "H14",
+            "col": 8,
+            "file": "maple_court.xlsx",
+            "row": 14,
+            "sheet": "Rent Roll"
+          },
+          "value": "2025-11-15"
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": 1650,
+          "source": {
+            "cell": "E14",
+            "col": 5,
+            "file": "maple_court.xlsx",
+            "row": 14,
+            "sheet": "Rent Roll"
+          },
+          "value": "1650.00"
+        },
+        "move_in": {
+          "derived": false,
+          "raw": "2023-11-15T00:00:00",
+          "source": {
+            "cell": "J14",
+            "col": 10,
+            "file": "maple_court.xlsx",
+            "row": 14,
+            "sheet": "Rent Roll"
+          },
+          "value": "2023-11-15"
+        },
+        "sqft": {
+          "derived": false,
+          "raw": 875,
+          "source": {
+            "cell": "C14",
+            "col": 3,
+            "file": "maple_court.xlsx",
+            "row": 14,
+            "sheet": "Rent Roll"
+          },
+          "value": 875
+        },
+        "status": {
+          "derived": true,
+          "raw": null,
+          "source": {
+            "cell": "D14",
+            "col": 4,
+            "file": "maple_court.xlsx",
+            "row": 14,
+            "sheet": "Rent Roll"
+          },
+          "value": "occupied"
+        },
+        "tenant": {
+          "derived": false,
+          "raw": "O'BRIEN, SEAN",
+          "source": {
+            "cell": "D14",
+            "col": 4,
+            "file": "maple_court.xlsx",
+            "row": 14,
+            "sheet": "Rent Roll"
+          },
+          "value": "O'Brien, Sean"
+        },
+        "unit": {
+          "derived": false,
+          "raw": 101,
+          "source": {
+            "cell": "A14",
+            "col": 1,
+            "file": "maple_court.xlsx",
+            "row": 14,
+            "sheet": "Rent Roll"
+          },
+          "value": "101"
+        },
+        "unit_type": {
+          "derived": false,
+          "raw": "2x1",
+          "source": {
+            "cell": "B14",
+            "col": 2,
+            "file": "maple_court.xlsx",
+            "row": 14,
+            "sheet": "Rent Roll"
+          },
+          "value": "2x1"
+        }
+      },
+      "section": "Building B",
+      "source_row": 14
+    },
+    {
+      "charges": [],
+      "fields": {
+        "current_rent": {
+          "derived": false,
+          "raw": 1900,
+          "source": {
+            "cell": "F15",
+            "col": 6,
+            "file": "maple_court.xlsx",
+            "row": 15,
+            "sheet": "Rent Roll"
+          },
+          "value": "1900.00"
+        },
+        "deposit": {
+          "derived": false,
+          "raw": 750,
+          "source": {
+            "cell": "G15",
+            "col": 7,
+            "file": "maple_court.xlsx",
+            "row": 15,
+            "sheet": "Rent Roll"
+          },
+          "value": "750.00"
+        },
+        "lease_end": {
+          "derived": false,
+          "raw": "2027-05-31T00:00:00",
+          "source": {
+            "cell": "I15",
+            "col": 9,
+            "file": "maple_court.xlsx",
+            "row": 15,
+            "sheet": "Rent Roll"
+          },
+          "value": "2027-05-31"
+        },
+        "lease_start": {
+          "derived": false,
+          "raw": "2026-06-01T00:00:00",
+          "source": {
+            "cell": "H15",
+            "col": 8,
+            "file": "maple_court.xlsx",
+            "row": 15,
+            "sheet": "Rent Roll"
+          },
+          "value": "2026-06-01"
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": 1900,
+          "source": {
+            "cell": "E15",
+            "col": 5,
+            "file": "maple_court.xlsx",
+            "row": 15,
+            "sheet": "Rent Roll"
+          },
+          "value": "1900.00"
+        },
+        "move_in": {
+          "derived": false,
+          "raw": "2026-06-01T00:00:00",
+          "source": {
+            "cell": "J15",
+            "col": 10,
+            "file": "maple_court.xlsx",
+            "row": 15,
+            "sheet": "Rent Roll"
+          },
+          "value": "2026-06-01"
+        },
+        "sqft": {
+          "derived": false,
+          "raw": 990,
+          "source": {
+            "cell": "C15",
+            "col": 3,
+            "file": "maple_court.xlsx",
+            "row": 15,
+            "sheet": "Rent Roll"
+          },
+          "value": 990
+        },
+        "status": {
+          "derived": true,
+          "raw": null,
+          "source": {
+            "cell": "D15",
+            "col": 4,
+            "file": "maple_court.xlsx",
+            "row": 15,
+            "sheet": "Rent Roll"
+          },
+          "value": "occupied"
+        },
+        "tenant": {
+          "derived": false,
+          "raw": "Patel, Anika",
+          "source": {
+            "cell": "D15",
+            "col": 4,
+            "file": "maple_court.xlsx",
+            "row": 15,
+            "sheet": "Rent Roll"
+          },
+          "value": "Patel, Anika"
+        },
+        "unit": {
+          "derived": false,
+          "raw": 102,
+          "source": {
+            "cell": "A15",
+            "col": 1,
+            "file": "maple_court.xlsx",
+            "row": 15,
+            "sheet": "Rent Roll"
+          },
+          "value": "102"
+        },
+        "unit_type": {
+          "derived": false,
+          "raw": "2x2",
+          "source": {
+            "cell": "B15",
+            "col": 2,
+            "file": "maple_court.xlsx",
+            "row": 15,
+            "sheet": "Rent Roll"
+          },
+          "value": "2x2"
+        }
+      },
+      "section": "Building B",
+      "source_row": 15
+    }
+  ],
+  "skipped": {
+    "repeated_header": 1,
+    "section": 2
+  },
+  "source": {
+    "file": "maple_court.xlsx",
+    "header_rows": [
+      5,
+      6
+    ],
+    "sheet": "Rent Roll",
+    "sheets": [
+      "Rent Roll"
+    ]
+  },
+  "summary": {
+    "acknowledged": 0,
+    "corrections": 0,
+    "errors": 0,
+    "physical_occupancy": 0.8,
+    "status_counts": {
+      "occupied": 4,
+      "vacant": 1
+    },
+    "total_current_rent": "6775.00",
+    "total_market_rent": "8345.00",
+    "total_sqft": 4145,
+    "units": 5,
+    "warnings": 0
+  },
+  "totals": [
+    {
+      "amounts": {
+        "current_rent": {
+          "derived": false,
+          "raw": "$3,275.00",
+          "source": {
+            "cell": "F11",
+            "col": 6,
+            "file": "maple_court.xlsx",
+            "row": 11,
+            "sheet": "Rent Roll"
+          },
+          "value": "3275.00"
+        },
+        "deposit": {
+          "derived": false,
+          "raw": 1250,
+          "source": {
+            "cell": "G11",
+            "col": 7,
+            "file": "maple_court.xlsx",
+            "row": 11,
+            "sheet": "Rent Roll"
+          },
+          "value": "1250.00"
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": "$4,795.00",
+          "source": {
+            "cell": "E11",
+            "col": 5,
+            "file": "maple_court.xlsx",
+            "row": 11,
+            "sheet": "Rent Roll"
+          },
+          "value": "4795.00"
+        },
+        "sqft": {
+          "derived": false,
+          "raw": 2280,
+          "source": {
+            "cell": "C11",
+            "col": 3,
+            "file": "maple_court.xlsx",
+            "row": 11,
+            "sheet": "Rent Roll"
+          },
+          "value": 2280
+        }
+      },
+      "computed": {
+        "current_rent": "3275.00",
+        "deposit": "1250.00",
+        "market_rent": "4795.00",
+        "sqft": "2280"
+      },
+      "covers_rows": [
+        8,
+        9,
+        10
+      ],
+      "label": "Total Building A",
+      "row": 11,
+      "section": "Building A"
+    },
+    {
+      "amounts": {
+        "current_rent": {
+          "derived": false,
+          "raw": 3500,
+          "source": {
+            "cell": "F16",
+            "col": 6,
+            "file": "maple_court.xlsx",
+            "row": 16,
+            "sheet": "Rent Roll"
+          },
+          "value": "3500.00"
+        },
+        "deposit": {
+          "derived": false,
+          "raw": 1350,
+          "source": {
+            "cell": "G16",
+            "col": 7,
+            "file": "maple_court.xlsx",
+            "row": 16,
+            "sheet": "Rent Roll"
+          },
+          "value": "1350.00"
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": 3550,
+          "source": {
+            "cell": "E16",
+            "col": 5,
+            "file": "maple_court.xlsx",
+            "row": 16,
+            "sheet": "Rent Roll"
+          },
+          "value": "3550.00"
+        },
+        "sqft": {
+          "derived": false,
+          "raw": 1865,
+          "source": {
+            "cell": "C16",
+            "col": 3,
+            "file": "maple_court.xlsx",
+            "row": 16,
+            "sheet": "Rent Roll"
+          },
+          "value": 1865
+        }
+      },
+      "computed": {
+        "current_rent": "3500.00",
+        "deposit": "1350.00",
+        "market_rent": "3550.00",
+        "sqft": "1865"
+      },
+      "covers_rows": [
+        14,
+        15
+      ],
+      "label": "Total Building B",
+      "row": 16,
+      "section": "Building B"
+    },
+    {
+      "amounts": {
+        "current_rent": {
+          "derived": false,
+          "raw": 6775,
+          "source": {
+            "cell": "F17",
+            "col": 6,
+            "file": "maple_court.xlsx",
+            "row": 17,
+            "sheet": "Rent Roll"
+          },
+          "value": "6775.00"
+        },
+        "deposit": {
+          "derived": false,
+          "raw": 2600,
+          "source": {
+            "cell": "G17",
+            "col": 7,
+            "file": "maple_court.xlsx",
+            "row": 17,
+            "sheet": "Rent Roll"
+          },
+          "value": "2600.00"
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": 8345,
+          "source": {
+            "cell": "E17",
+            "col": 5,
+            "file": "maple_court.xlsx",
+            "row": 17,
+            "sheet": "Rent Roll"
+          },
+          "value": "8345.00"
+        },
+        "sqft": {
+          "derived": false,
+          "raw": 4145,
+          "source": {
+            "cell": "C17",
+            "col": 3,
+            "file": "maple_court.xlsx",
+            "row": 17,
+            "sheet": "Rent Roll"
+          },
+          "value": 4145
+        }
+      },
+      "computed": {
+        "current_rent": "6775.00",
+        "deposit": "2600.00",
+        "market_rent": "8345.00",
+        "sqft": "4145"
+      },
+      "covers_rows": [
+        8,
+        9,
+        10,
+        14,
+        15
+      ],
+      "label": "Grand Total",
+      "row": 17,
+      "section": "Building B"
+    }
+  ]
+}
