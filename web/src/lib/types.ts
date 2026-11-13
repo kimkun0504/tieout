@@ -190,4 +190,4 @@ export interface SourceSheet {
   merges: [number, number, number, number][];
 }
 
-export type ExportFormat = "xlsx" | "csv" | "json" | "issues" | "report";
+export type ExportFormat = "xlsx" | "csv" | "json" | "issues" | "report" | "jsonl";

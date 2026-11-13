@@ -164,12 +164,14 @@ function JobHeader({ data }: { data: JobResponse }) {
   );
 }
 
-const EXPORTS: [ExportFormat, string][] = [
-  ["xlsx", "Excel workbook"],
-  ["csv", "CSV"],
-  ["json", "JSON with sources"],
-  ["issues", "Issues (CSV)"],
-  ["report", "Summary report"],
+const EXPORTS: [ExportFormat, string, boolean][] = [
+  ["xlsx", "Excel workbook", false],
+  ["csv", "CSV", false],
+  ["json", "JSON with sources", false],
+  ["jsonl", "Records for AI (JSONL)", false],
+  ["jsonl", "Records for AI, no tenant names", true],
+  ["issues", "Issues (CSV)", false],
+  ["report", "Summary report", false],
 ];
 
 function ExportMenu({ jobId, ok }: { jobId: string; ok: boolean }) {
@@ -184,8 +186,13 @@ function ExportMenu({ jobId, ok }: { jobId: string; ok: boolean }) {
       </summary>
       <div className="absolute right-0 z-20 mt-1 w-56 rounded-md border border-rule bg-surface py-1 shadow-lg">
         {!ok && <p className="px-3 py-1.5 text-xs text-err">Open errors will be listed in the export.</p>}
-        {EXPORTS.map(([fmt, label]) => (
-          <a key={fmt} href={api.exportUrl(jobId, fmt)} download className="block px-3 py-1.5 text-sm hover:bg-paper">
+        {EXPORTS.map(([fmt, label, redact]) => (
+          <a
+            key={label}
+            href={api.exportUrl(jobId, fmt, redact)}
+            download
+            className="block px-3 py-1.5 text-sm hover:bg-paper"
+          >
             {label}
           </a>
         ))}

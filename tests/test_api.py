@@ -174,3 +174,22 @@ def test_switching_to_an_unreadable_sheet_changes_nothing(client, tmp_path):
     assert r.status_code == 422 and "Can't use that sheet" in r.json()["detail"]
     after = client.get(f"/api/jobs/{job}")
     assert after.status_code == 200 and after.json()["result"]["source"]["sheet"] == "Rent Roll"
+
+
+def test_jsonl_export_with_redaction(client, stacked_xlsx):
+    job = upload(client, stacked_xlsx).json()["job"]["id"]
+    plain = client.get(f"/api/jobs/{job}/export/jsonl")
+    assert plain.status_code == 200 and "ndjson" in plain.headers["content-type"]
+    lines = [json.loads(x) for x in plain.text.splitlines()]
+    assert lines[0]["id"] == "maple_court.xlsx#row-8"
+    assert "Garcia" in plain.text
+    redacted = client.get(f"/api/jobs/{job}/export/jsonl", params={"redact_tenants": True})
+    assert "Garcia" not in redacted.text
+
+
+def test_security_headers_and_request_id(client):
+    r = client.get("/api/health", headers={"X-Request-ID": "abc123"})
+    assert r.headers["X-Content-Type-Options"] == "nosniff"
+    assert "frame-ancestors 'none'" in r.headers["Content-Security-Policy"]
+    assert r.headers["X-Request-ID"] == "abc123"
+    assert len(client.get("/api/health").headers["X-Request-ID"]) == 12

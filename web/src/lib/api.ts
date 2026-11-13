@@ -81,5 +81,6 @@ export const api = {
     request<JobResponse>(`/api/jobs/${id}/acknowledgments/${issueId}`, { method: "DELETE" }),
   saveTemplate: (id: string, name: string) =>
     request<{ template: string }>(`/api/jobs/${id}/template`, { method: "POST", body: json({ name }) }),
-  exportUrl: (id: string, fmt: ExportFormat) => `/api/jobs/${id}/export/${fmt}`,
+  exportUrl: (id: string, fmt: ExportFormat, redactTenants = false) =>
+    `/api/jobs/${id}/export/${fmt}${redactTenants ? "?redact_tenants=true" : ""}`,
 };

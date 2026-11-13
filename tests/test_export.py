@@ -30,3 +30,29 @@ def test_report_escapes_pipes(tmp_path):
     src.write_text("Unit,Tenant,Rent,Notes | Misc\n101,A,1000,x\n", newline="")
     paths = write_all(clean_file(src), tmp_path / "out")
     assert "Notes \\| Misc" in paths["report"].read_text()
+
+
+def test_jsonl_records_are_retrieval_ready(stacked_xlsx, tmp_path):
+    from tieout.export import to_jsonl_records
+
+    records = to_jsonl_records(clean_file(stacked_xlsx))
+    units = [r for r in records if r["type"] == "unit"]
+    assert len(units) == 5 and records[-1]["type"] == "property_summary"
+    first = units[0]
+    assert first["text"] == (
+        "Unit 101 (1x1, 650 sq ft) in Building A is occupied, leased to Garcia, Maria. "
+        "Rent is $1,425.00 per month against market rent of $1,450.00. Also: deposit $500.00. "
+        "Lease runs Feb 1, 2026 to Jan 31, 2027. Moved in Feb 1, 2024."
+    )
+    assert first["fields"]["current_rent"] == "1425.00"
+    assert first["metadata"]["cells"]["current_rent"] == "F8"
+    assert first["metadata"]["source_row"] == 8
+    assert "status" in units[1]["metadata"]["derived_fields"]  # VACANT marker -> status
+    assert "5 units, 4 occupied (80.0% physical occupancy)" in records[-1]["text"]
+
+
+def test_jsonl_can_remove_tenant_names(stacked_xlsx):
+    from tieout.export import to_jsonl_records
+
+    for rec in to_jsonl_records(clean_file(stacked_xlsx), redact_tenants=True):
+        assert "Garcia" not in rec["text"] and "tenant" not in rec["fields"]

@@ -36,6 +36,11 @@
       "type": "money"
     },
     {
+      "description": "Rent per year (common in commercial rent rolls)",
+      "name": "annual_rent",
+      "type": "money"
+    },
+    {
       "description": "Monthly concessions or discounts (usually negative)",
       "name": "concessions",
       "type": "money"

@@ -45,7 +45,7 @@ export function TieOutStrip({ result, onSelect }: { result: Result; onSelect: (r
               >
                 <div className="flex items-center gap-2 text-sm text-ink-2">
                   <span className="truncate">
-                    {t.label}, {fieldLabel(field === "charge_amount" ? "total_charges" : field).toLowerCase()}
+                    {t.label}, {fieldLabel(field === "charge_amount" ? "charges" : field).toLowerCase()}
                   </span>
                   <span className="ml-auto text-xs text-ink-3">row {t.row}</span>
                 </div>

@@ -14,7 +14,7 @@ from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 from tieout import __version__
-from tieout.models import jsonable
+from tieout.models import Severity, jsonable
 from tieout.pipeline import CleanResult
 from tieout.schema import FIELDS_BY_NAME, OUTPUT_FIELDS, FieldType
 from tieout.validate import row_amount
@@ -32,7 +32,9 @@ def write_all(result: CleanResult, out_dir: str | Path) -> dict[str, Path]:
         "issues": out / f"{stem}.issues.csv",
         "report": out / f"{stem}.report.md",
         "xlsx": out / f"{stem}.clean.xlsx",
+        "jsonl": out / f"{stem}.records.jsonl",
     }
+    write_jsonl(result, paths["jsonl"])
     write_xlsx(result, paths["xlsx"])
     write_csv(result, paths["csv"])
     write_json(result, paths["json"])
@@ -285,3 +287,104 @@ def write_xlsx(result: CleanResult, path: Path) -> None:
     summary.append(["source_file", _safe(result.source_file)])
     summary.append(["generated_by", f"tieout {__version__}"])
     wb.save(path)
+
+
+def _money_words(v: Any) -> str:
+    return f"${Decimal(v):,.2f}" if v is not None else ""
+
+
+def _date_words(v: Any) -> str:
+    return f"{v:%b} {v.day}, {v.year}" if isinstance(v, date) else ""
+
+
+def unit_text(row: Any, redact: bool) -> str:
+    """One unit as plain sentences an LLM can retrieve and quote."""
+    g = row.get
+    unit = g("unit") or f"row {row.source_row}"
+    bits = [str(x) for x in (g("unit_type"), f"{g('sqft'):,} sq ft" if g("sqft") else None) if x]
+    head = f"Unit {unit}" + (f" ({', '.join(bits)})" if bits else "") + (f" in {row.section}" if row.section else "")
+    status = g("status") or "status unknown"
+    tenant = g("tenant")
+    who = f", leased to {tenant}" if tenant and not redact else (", leased" if tenant else "")
+    parts = [f"{head} is {status}{who}."]
+    if g("current_rent") is not None:
+        rent = f"Rent is {_money_words(g('current_rent'))} per month"
+        if g("market_rent") is not None:
+            rent += f" against market rent of {_money_words(g('market_rent'))}"
+        parts.append(rent + ".")
+    extras = [
+        f"{label} {_money_words(g(f))}"
+        for f, label in (("concessions", "concessions"), ("other_charges", "other charges"), ("deposit", "deposit"))
+        if g(f) is not None
+    ]
+    if extras:
+        parts.append("Also: " + ", ".join(extras) + ".")
+    if g("lease_start") or g("lease_end"):
+        parts.append(f"Lease runs {_date_words(g('lease_start')) or '?'} to {_date_words(g('lease_end')) or '?'}.")
+    if g("move_in"):
+        parts.append(f"Moved in {_date_words(g('move_in'))}.")
+    return " ".join(parts)
+
+
+def to_jsonl_records(result: CleanResult, redact_tenants: bool = False) -> list[dict[str, Any]]:
+    """Retrieval-ready records: one per unit plus a property summary.
+
+    Each record has `text` (plain sentences for embedding), `fields` (typed
+    values) and `metadata` (source file, row, provenance flags, review state)
+    so an answer generated from a record can be traced back to its cell.
+    """
+    open_rows = {i.row for i in result.open_issues if i.row is not None and i.severity is not Severity.INFO}
+    base = {
+        "source_file": result.source_file,
+        "sheet": result.sheet,
+        "tieout_version": __version__,
+        "as_of": result.as_of.isoformat() if result.as_of else None,
+        "file_ok": result.ok,
+    }
+    records: list[dict[str, Any]] = []
+    for row in result.rows:
+        fields = {k: jsonable(v.value) for k, v in row.values.items()}
+        if redact_tenants:
+            fields.pop("tenant", None)
+        records.append(
+            {
+                "id": f"{result.source_file}#row-{row.source_row}",
+                "type": "unit",
+                "text": unit_text(row, redact_tenants),
+                "fields": fields,
+                "metadata": {
+                    **base,
+                    "source_row": row.source_row,
+                    "section": row.section,
+                    "cells": {k: v.source.cell for k, v in row.values.items() if v.source and k in fields},
+                    "derived_fields": sorted(k for k, v in row.values.items() if v.derived and k in fields),
+                    "corrected_fields": sorted(k for k, v in row.values.items() if v.correction and k in fields),
+                    "has_open_issues": row.source_row in open_rows,
+                },
+            }
+        )
+    m = result.metrics()
+    summary = (
+        f"{result.source_file}: {m['units']} units, {m['occupied_units']} occupied "
+        f"({(m['physical_occupancy'] or 0):.1%} physical occupancy). In-place rent {_money_words(m['in_place_rent'])} "
+        f"per month."
+        + (f" Gross potential rent {_money_words(m['gross_potential_rent'])}." if m["gross_potential_rent"] else "")
+        + (f" Loss to lease {_money_words(m['loss_to_lease'])}." if m["loss_to_lease"] else "")
+        + ("" if result.ok else " Some totals or values still need review.")
+    )
+    records.append(
+        {
+            "id": f"{result.source_file}#summary",
+            "type": "property_summary",
+            "text": summary,
+            "fields": {k: v for k, v in m.items() if not isinstance(v, (list, dict))},
+            "metadata": base,
+        }
+    )
+    return records
+
+
+def write_jsonl(result: CleanResult, path: Path, redact_tenants: bool = False) -> None:
+    with path.open("w") as f:
+        for rec in to_jsonl_records(result, redact_tenants):
+            f.write(json.dumps(rec, default=str) + "\n")

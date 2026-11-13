@@ -85,6 +85,21 @@ RENT_ROLL_FIELDS: tuple[FieldSpec, ...] = (
         description="Rent actually charged per month",
     ),
     FieldSpec(
+        "annual_rent",
+        FieldType.MONEY,
+        (
+            "annual rent",
+            "annual base rent",
+            "annualized rent",
+            "annual rent amount",
+            "yearly rent",
+            "base rent annual",
+            "abr",
+            "current annual rent",
+        ),
+        description="Rent per year (common in commercial rent rolls)",
+    ),
+    FieldSpec(
         "concessions",
         FieldType.MONEY,
         ("concessions", "concession", "monthly concession", "discount", "rent concession"),

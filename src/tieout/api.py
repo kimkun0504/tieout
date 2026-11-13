@@ -11,25 +11,42 @@ authentication. Put it behind an authenticating proxy before exposing it.
 from __future__ import annotations
 
 import io
+import logging
 import re
+import time
+import uuid
 from dataclasses import asdict
 from datetime import date, datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from tieout import __version__
-from tieout.export import render_report, to_payload, write_csv, write_issues, write_json, write_xlsx
+from tieout.export import render_report, to_payload, write_csv, write_issues, write_json, write_jsonl, write_xlsx
 from tieout.ingest import UnsupportedFormat
 from tieout.schema import RENT_ROLL_FIELDS
 from tieout.store import MAX_UPLOAD_BYTES, JobMeta, JobNotFound, JobStore
 
 WEB_DIST = Path(__file__).parent / "web"
+log = logging.getLogger("tieout.api")
+
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    # The app loads nothing from other origins. Inline styles are allowed for
+    # computed sizes (chart bars); scripts are not.
+    "Content-Security-Policy": (
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+        "font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+    ),
+}
 MAX_SOURCE_ROWS = 5000
 
 
@@ -67,6 +84,23 @@ def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
     store = JobStore(data_dir)
     app = FastAPI(title="tieout", version=__version__)
     app.add_middleware(GZipMiddleware, minimum_size=2048)
+
+    @app.middleware("http")
+    async def _headers_and_logging(request: Request, call_next: Any) -> Any:
+        request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:12]
+        started = time.perf_counter()
+        response = await call_next(request)
+        response.headers.update(SECURITY_HEADERS)
+        response.headers["X-Request-ID"] = request_id
+        log.info(
+            "%s %s %s %.0fms request_id=%s",
+            request.method,
+            request.url.path,
+            response.status_code,
+            (time.perf_counter() - started) * 1000,
+            request_id,
+        )
+        return response
 
     @app.exception_handler(JobNotFound)
     async def _not_found(_req: Any, _exc: JobNotFound) -> JSONResponse:
@@ -221,10 +255,15 @@ def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
         "json": ("application/json", ".clean.json"),
         "issues": ("text/csv", ".issues.csv"),
         "report": ("text/markdown", ".report.md"),
+        "jsonl": ("application/x-ndjson", ".records.jsonl"),
     }
 
     @app.get("/api/jobs/{job_id}/export/{fmt}")
-    def export(job_id: str, fmt: Literal["csv", "xlsx", "json", "issues", "report"]) -> StreamingResponse:
+    def export(
+        job_id: str,
+        fmt: Literal["csv", "xlsx", "json", "issues", "report", "jsonl"],
+        redact_tenants: bool = False,
+    ) -> StreamingResponse:
         import tempfile
 
         result = store.run(job_id)
@@ -232,9 +271,12 @@ def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
         stem = re.sub(r"[^\w.-]", "_", Path(store.meta(job_id).filename).stem) or "rent_roll"
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / f"out{suffix}"
-            {"csv": write_csv, "xlsx": write_xlsx, "json": write_json, "issues": write_issues}.get(
-                fmt, lambda r, p: p.write_text(render_report(r))
-            )(result, path)
+            if fmt == "jsonl":
+                write_jsonl(result, path, redact_tenants)
+            elif fmt == "report":
+                path.write_text(render_report(result))
+            else:
+                {"csv": write_csv, "xlsx": write_xlsx, "json": write_json, "issues": write_issues}[fmt](result, path)
             data = path.read_bytes()
         return StreamingResponse(
             io.BytesIO(data),

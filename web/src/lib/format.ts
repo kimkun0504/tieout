@@ -72,6 +72,7 @@ const LABELS: Record<string, string> = {
   status: "Status",
   market_rent: "Market rent",
   current_rent: "Rent",
+  annual_rent: "Annual rent",
   concessions: "Concessions",
   other_charges: "Other charges",
   total_charges: "Total charges",
@@ -81,6 +82,7 @@ const LABELS: Record<string, string> = {
   lease_end: "Lease end",
   charge_code: "Charge code",
   charge_amount: "Charge amount",
+  charges: "Charges",
 };
 
 export function fieldLabel(name: string | null | undefined): string {
@@ -110,6 +112,8 @@ const RULES: Record<string, string> = {
   correction_orphaned: "Correction has no row",
   rent_per_sqft_outlier: "Rent per sq ft out of line",
   move_in_after_report_date: "Move-in after report date",
+  annual_monthly_mismatch: "Annual and monthly rent disagree",
+  rent_charge_mismatch: "Rent differs from charge lines",
 };
 
 export function ruleLabel(rule: string): string {

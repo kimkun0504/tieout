@@ -15,7 +15,13 @@ from tieout.mapping import ColumnMapping
 from tieout.models import CleanRow, Issue, ReportedTotal, Severity
 from tieout.schema import FIELDS_BY_NAME
 
-_LABELS = {"current_rent": "rent", "sqft": "sq ft", "charge_amount": "charges", "market_rent": "market rent"}
+_LABELS = {
+    "current_rent": "rent",
+    "sqft": "sq ft",
+    "charge_amount": "charges",
+    "market_rent": "market rent",
+    "annual_rent": "annual rent",
+}
 
 
 def label(name: str | None) -> str:
@@ -52,6 +58,7 @@ def run_all(
     issues += check_duplicates(rows)
     issues += check_row_rules(rows, as_of)
     issues += check_outliers(rows)
+    issues += check_cross_fields(rows)
     issues += check_tie_out(rows, totals)
     order = {Severity.ERROR: 0, Severity.WARNING: 1, Severity.INFO: 2}
     issues.sort(key=lambda i: (order[i.severity], i.row or 0))
@@ -61,8 +68,8 @@ def run_all(
 def check_mapping(mappings: list[ColumnMapping]) -> list[Issue]:
     issues = []
     mapped = {m.field for m in mappings if m.field}
-    if {"charge_code", "charge_amount"} <= mapped:
-        mapped = mapped | {"current_rent"}  # rolled up from rent charge lines
+    if {"charge_code", "charge_amount"} <= mapped or "annual_rent" in mapped:
+        mapped = mapped | {"current_rent"}  # rolled up from rent charge lines, or annual / 12
     for spec in FIELDS_BY_NAME.values():
         if spec.required and spec.name not in mapped:
             issues.append(
@@ -237,6 +244,53 @@ def check_row_rules(rows: list[CleanRow], as_of: date | None) -> list[Issue]:
                     "lease_end",
                 )
             )
+    return issues
+
+
+CROSS_CHECK_TOLERANCE = Decimal("1.00")
+
+
+def check_cross_fields(rows: list[CleanRow]) -> list[Issue]:
+    """When a file states the same number two ways, the two must agree."""
+    issues = []
+    for row in rows:
+        unit, r = row.get("unit"), row.source_row
+        rent_tv = row.values.get("current_rent")
+        rent = row.get("current_rent")
+        annual = row.get("annual_rent")
+        if annual is not None and rent is not None and rent_tv is not None and not rent_tv.derived:
+            gap = annual - rent * 12
+            if abs(gap) > CROSS_CHECK_TOLERANCE:
+                issues.append(
+                    Issue(
+                        Severity.WARNING,
+                        "annual_monthly_mismatch",
+                        f"Unit {unit}: annual rent {show(annual)} is not 12 x monthly rent {show(rent)} "
+                        f"(difference {show(gap)}).",
+                        r,
+                        "annual_rent",
+                    )
+                )
+        rent_lines = [c.amount.value for c in row.charges if c.category == "rent" and c.amount.value is not None]
+        if (
+            rent_lines
+            and rent is not None
+            and rent_tv is not None
+            and not rent_tv.derived
+            and rent_tv.correction is None
+        ):
+            charged = sum(rent_lines, Decimal(0))
+            if abs(charged - rent) > CROSS_CHECK_TOLERANCE:
+                issues.append(
+                    Issue(
+                        Severity.WARNING,
+                        "rent_charge_mismatch",
+                        f"Unit {unit}: the rent column says {show(rent)} but its rent charge lines add up to "
+                        f"{show(charged)}.",
+                        r,
+                        "current_rent",
+                    )
+                )
     return issues
 
 

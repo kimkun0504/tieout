@@ -12,7 +12,7 @@ import re
 from dataclasses import dataclass
 from dataclasses import field as dc_field
 from datetime import date
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any
 
@@ -139,6 +139,7 @@ def clean_file(
     by_source_row = {r.source_row: r for r in rows}
     for row in rows:
         _roll_up_charges(row, col_for)
+        _derive_monthly_from_annual(row, col_for)
         _clean_tenant(row)
         _apply_corrections(row, review)
         _ensure_status(row, "tenant" in col_for)
@@ -302,6 +303,19 @@ def _roll_up_charges(row: CleanRow, col_for: dict[str, int]) -> None:
     if cells["other"]:
         put("other_charges", sums["other"], cells["other"])
     put("total_charges", sum(sums.values(), Decimal(0)), cells["rent"] + cells["concession"] + cells["other"])
+
+
+def _derive_monthly_from_annual(row: CleanRow, col_for: dict[str, int]) -> None:
+    """Commercial rent rolls often state annual rent only. Monthly = annual / 12, marked derived."""
+    annual = row.values.get("annual_rent")
+    if annual is None or annual.value is None or "current_rent" in col_for:
+        return
+    if row.get("current_rent") is not None:
+        return  # already rolled up from charge lines
+    monthly = (annual.value / 12).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    row.values["current_rent"] = TracedValue(
+        monthly, None, annual.source, derived=True, sources=[annual.source] if annual.source else []
+    )
 
 
 def _clean_tenant(row: CleanRow) -> None:

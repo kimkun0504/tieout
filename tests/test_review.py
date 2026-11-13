@@ -184,3 +184,58 @@ def test_metrics_follow_underwriting_definitions(charges_xlsx):
     assert next(x for x in exp["by_month"] if x["month"] == "2026-12")["units"] == 1
     mix = {u["unit_type"]: u for u in m["unit_mix"]}
     assert mix["2x2"]["units"] == 2 and mix["2x2"]["occupied"] == 1
+
+
+# --- annual rent and cross-checks ------------------------------------------------------------
+
+
+def _wb(tmp_path, rows, name="t.xlsx"):
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    for row in rows:
+        wb.active.append(row)
+    wb.save(tmp_path / name)
+    return tmp_path / name
+
+
+def test_monthly_rent_is_derived_from_annual_rent(tmp_path):
+    path = _wb(
+        tmp_path,
+        [
+            ["Suite", "Tenant", "RSF", "Annual Base Rent", "Lease Expiration"],
+            ["100", "Acme Dental LLC", 2400, 72000, "12/31/2028"],
+            ["200", "Blue Fern Cafe", 1500, 41000, "6/30/2027"],
+            ["Total", None, 3900, 113000],
+        ],
+    )
+    r = clean_file(path)
+    assert {m.header: m.field for m in r.mappings}["Annual Base Rent"] == "annual_rent"
+    suite = r.rows[1]
+    assert suite.get("current_rent") == Decimal("3416.67")  # 41,000 / 12, half up
+    assert suite.values["current_rent"].derived
+    assert suite.values["current_rent"].source.cell == "D3"
+    assert "required_column_missing" not in rules(r)
+    assert r.ok
+
+
+def test_annual_and_monthly_must_agree(tmp_path):
+    path = _wb(tmp_path, [["Unit", "Tenant", "Rent", "Annual Rent"], ["1", "A", 1000, 12000], ["2", "B", 1000, 13200]])
+    r = clean_file(path)
+    assert [i.row for i in r.issues if i.rule == "annual_monthly_mismatch"] == [3]
+
+
+def test_rent_column_must_match_rent_charge_lines(tmp_path):
+    path = _wb(
+        tmp_path,
+        [
+            ["Unit", "Tenant", "Rent", "Charge Code", "Amount"],
+            ["1", "A", 1000, "RENT", 1000],
+            [None, None, None, "PARK", 50],
+            ["2", "B", 1100, "RENT", 1150],
+        ],
+    )
+    r = clean_file(path)
+    flagged = [i for i in r.issues if i.rule == "rent_charge_mismatch"]
+    assert [i.row for i in flagged] == [4]
+    assert r.rows[0].get("other_charges") == Decimal("50.00")
