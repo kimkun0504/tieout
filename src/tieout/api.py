@@ -32,6 +32,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from tieout import __version__
 from tieout.export import render_report, write_csv, write_issues, write_json, write_jsonl, write_xlsx
 from tieout.ingest import UnsupportedFormat
+from tieout.pipeline import CleanResult
 from tieout.schema import RENT_ROLL_FIELDS
 from tieout.store import MAX_UPLOAD_BYTES, JobMeta, JobNotFound, JobStore
 
@@ -300,37 +301,36 @@ def create_app(data_dir: str | Path = "tieout-data", allowed_hosts: list[str] | 
         "issues": ("text/csv; charset=utf-8", ".issues.csv"),
         "report": ("text/markdown; charset=utf-8", ".report.md"),
         "jsonl": ("application/x-ndjson; charset=utf-8", ".records.jsonl"),
+        "bundle": ("application/zip", ".tieout.zip"),
     }
 
     @app.get("/api/jobs/{job_id}/export/{fmt}")
     def export(
         job_id: str,
-        fmt: Literal["csv", "xlsx", "json", "issues", "report", "jsonl"],
+        fmt: Literal["csv", "xlsx", "json", "issues", "report", "jsonl", "bundle"],
         redact_tenants: bool = False,
     ) -> StreamingResponse:
         import tempfile
 
         meta = store.meta(job_id)
-        stem = re.sub(r"[^\w.-]", "_", Path(meta.filename).stem) or "statement"
+        # Keep the upload's name, letters in any script included; drop anything path-like.
+        stem = re.sub(r"[^\w .()-]", "_", Path(meta.filename).stem).strip(" .") or meta.document_type
         if meta.document_type == "t12":
             return _export_t12(store, job_id, fmt, stem)
         result = store.run(job_id)
         mime, suffix = media[fmt]
-        stem = re.sub(r"[^\w.-]", "_", Path(store.meta(job_id).filename).stem) or "rent_roll"
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / f"out{suffix}"
-            if fmt == "jsonl":
+            if fmt == "bundle":
+                _write_bundle(result, Path(tmp), path, stem)
+            elif fmt == "jsonl":
                 write_jsonl(result, path, redact_tenants)
             elif fmt == "report":
                 path.write_text(render_report(result), encoding="utf-8")
             else:
                 {"csv": write_csv, "xlsx": write_xlsx, "json": write_json, "issues": write_issues}[fmt](result, path)
             data = path.read_bytes()
-        return StreamingResponse(
-            io.BytesIO(data),
-            media_type=mime,
-            headers={"Content-Disposition": f'attachment; filename="{stem}{suffix}"'},
-        )
+        return StreamingResponse(io.BytesIO(data), media_type=mime, headers=attachment(f"{stem}{suffix}"))
 
     # --- web app -------------------------------------------------------------------------
 
@@ -344,6 +344,30 @@ def create_app(data_dir: str | Path = "tieout-data", allowed_hosts: list[str] | 
             return FileResponse(WEB_DIST / "index.html")
 
     return app
+
+
+def _write_bundle(result: CleanResult, tmp: Path, zip_path: Path, stem: str) -> None:
+    """Every output in one zip, as `tieout clean` writes them, named after the upload."""
+    import zipfile
+
+    from tieout.export import write_all
+
+    paths = write_all(result, tmp / "bundle")
+    source_stem = Path(result.source_file).stem
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+        for p in sorted(paths.values()):
+            z.write(p, arcname=f"{stem}/{stem}{p.name[len(source_stem) :]}")
+
+
+def attachment(filename: str) -> dict[str, str]:
+    """Content-Disposition for any file name (RFC 6266): an ASCII fallback plus the UTF-8 name.
+
+    HTTP headers are Latin-1, so a name like "李 roll.csv" must not go in `filename=` as is.
+    """
+    from urllib.parse import quote
+
+    fallback = re.sub(r"[^A-Za-z0-9._-]+", "_", filename).strip("_") or "export"
+    return {"Content-Disposition": f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(filename, safe='')}"}
 
 
 def _export_t12(store: JobStore, job_id: str, fmt: str, stem: str) -> StreamingResponse:
@@ -365,9 +389,7 @@ def _export_t12(store: JobStore, job_id: str, fmt: str, stem: str) -> StreamingR
         "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "report": "text/markdown; charset=utf-8",
     }[fmt]
-    return StreamingResponse(
-        io.BytesIO(data), media_type=mime, headers={"Content-Disposition": f'attachment; filename="{stem}{suffix}"'}
-    )
+    return StreamingResponse(io.BytesIO(data), media_type=mime, headers=attachment(f"{stem}{suffix}"))
 
 
 def _cell_text(v: Any) -> str | None:

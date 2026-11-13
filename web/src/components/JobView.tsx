@@ -263,6 +263,7 @@ const EXPORTS: [ExportFormat, string, boolean][] = [
   ["jsonl", "Records for AI, no tenant names", true],
   ["issues", "Issues (CSV)", false],
   ["report", "Summary report", false],
+  ["bundle", "Everything, with data package (zip)", false],
 ];
 
 function ExportMenu({ jobId, ok }: { jobId: string; ok: boolean }) {

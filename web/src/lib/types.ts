@@ -204,7 +204,7 @@ export interface SourceSheet {
   merges: [number, number, number, number][];
 }
 
-export type ExportFormat = "xlsx" | "csv" | "json" | "issues" | "report" | "jsonl";
+export type ExportFormat = "xlsx" | "csv" | "json" | "issues" | "report" | "jsonl" | "bundle";
 
 // --- T-12 operating statements (tieout.t12.to_payload) ---------------------------------
 

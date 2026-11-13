@@ -280,3 +280,28 @@ def test_t12_issues_can_be_accepted_with_a_note(client, tmp_path):
     assert client.get("/api/jobs").json()[0]["last_ok"] is True
     r = client.delete(f"/api/jobs/{jid}/acknowledgments/{issue['id']}")
     assert r.json()["result"]["ok"] is False
+
+
+def test_exports_keep_non_latin_file_names(client, stacked_xlsx):
+    from urllib.parse import unquote
+
+    job = client.post("/api/jobs", files={"file": ("李 roll (Oct).xlsx", stacked_xlsx.read_bytes())}).json()["job"]
+    for fmt in ("csv", "report", "bundle"):
+        r = client.get(f"/api/jobs/{job['id']}/export/{fmt}")
+        assert r.status_code == 200, r.text
+        cd = r.headers["content-disposition"]
+        cd.encode("latin-1")  # header values must be Latin-1
+        assert unquote(cd.split("filename*=UTF-8''")[1]).startswith("李 roll (Oct).")
+
+
+def test_bundle_zips_every_output(client, stacked_xlsx):
+    import zipfile
+
+    job = client.post("/api/jobs", files={"file": ("maple.xlsx", stacked_xlsx.read_bytes())}).json()["job"]
+    r = client.get(f"/api/jobs/{job['id']}/export/bundle")
+    assert r.headers["content-type"] == "application/zip"
+    z = zipfile.ZipFile(io.BytesIO(r.content))
+    suffixes = (".clean.csv", ".clean.json", ".issues.csv", ".report.md", ".clean.xlsx", ".records.jsonl")
+    assert sorted(z.namelist()) == sorted(f"maple/maple{s}" for s in (*suffixes, ".datapackage.json"))
+    pkg = json.loads(z.read("maple/maple.datapackage.json"))
+    assert pkg["resources"][0]["path"] == "maple.clean.csv"
