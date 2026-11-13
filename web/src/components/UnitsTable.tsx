@@ -16,6 +16,15 @@ export function UnitsTable({
 }) {
   const [onlyProblems, setOnlyProblems] = useState(false);
   const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("");
+  const statusCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of result.rows) {
+      const s = String(r.fields.status?.value ?? "unknown");
+      counts.set(s, (counts.get(s) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  }, [result.rows]);
   const problems = useMemo(() => issuesByRow(result), [result]);
   const types = useMemo(() => Object.fromEntries(result.fields.map((f) => [f.name, f.type])), [result.fields]);
 
@@ -29,6 +38,7 @@ export function UnitsTable({
   const rows = result.rows.filter(
     (r) =>
       (!onlyProblems || problems.has(r.source_row)) &&
+      (!status || String(r.fields.status?.value ?? "unknown") === status) &&
       (!q || [r.fields.unit?.value, r.fields.tenant?.value].some((v) => String(v ?? "").toLowerCase().includes(q))),
   );
 
@@ -43,6 +53,19 @@ export function UnitsTable({
           aria-label="Find a unit or tenant"
           className="w-56 rounded border border-rule px-2 py-1 text-sm"
         />
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          aria-label="Status"
+          className="rounded border border-rule bg-surface px-2 py-1 text-sm"
+        >
+          <option value="">All statuses ({result.rows.length})</option>
+          {statusCounts.map(([s, n]) => (
+            <option key={s} value={s}>
+              {s === "future" ? "Future leases" : s.charAt(0).toUpperCase() + s.slice(1)} ({n})
+            </option>
+          ))}
+        </select>
         <label className="flex items-center gap-1.5 text-sm text-ink-2">
           <input type="checkbox" checked={onlyProblems} onChange={(e) => setOnlyProblems(e.target.checked)} />
           Only units with problems
