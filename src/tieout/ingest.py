@@ -177,16 +177,34 @@ def _read_excel(path: Path, sheet: str | None) -> Grid:
     )
 
 
+def decode_text(raw: bytes) -> str:
+    """Decode a delimited text export.
+
+    Excel's "Unicode Text" export is UTF-16 (often without telling anyone);
+    read as cp1252 it becomes text full of NUL characters. Detect it by its
+    byte-order mark, or by NULs in every other byte, before trying UTF-8 and
+    the Windows code page. Any stray NULs left are removed: they are never
+    data, and older Python csv readers refuse them.
+    """
+    sample = raw[:4096]
+    if raw.startswith((b"\xff\xfe", b"\xfe\xff")):
+        text = raw.decode("utf-16")
+    elif len(sample) >= 4 and sample[1::2].count(0) > len(sample) // 4:
+        text = raw.decode("utf-16-le", errors="replace")
+    elif len(sample) >= 4 and sample[0::2].count(0) > len(sample) // 4:
+        text = raw.decode("utf-16-be", errors="replace")
+    else:
+        for encoding in ("utf-8-sig", "cp1252", "latin-1"):
+            try:
+                text = raw.decode(encoding)
+                break
+            except UnicodeDecodeError:
+                continue
+    return text.replace("\x00", "")
+
+
 def _read_delimited(path: Path) -> Grid:
-    raw = path.read_bytes()
-    text = None
-    for encoding in ("utf-8-sig", "cp1252", "latin-1"):
-        try:
-            text = raw.decode(encoding)
-            break
-        except UnicodeDecodeError:
-            continue
-    assert text is not None  # latin-1 never fails
+    text = decode_text(path.read_bytes())
 
     try:
         dialect = csv.Sniffer().sniff(text[:4096], delimiters=",\t;|")

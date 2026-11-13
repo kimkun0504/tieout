@@ -303,3 +303,20 @@ def test_zip_bomb_and_non_zip_xlsx_are_refused(tmp_path):
 
 def test_workbook_lists_its_sheets(stacked_xlsx):
     assert clean_file(stacked_xlsx).sheets == ["Rent Roll"]
+
+
+def test_utf16_tab_export_from_excel(tmp_path):
+    """Excel's 'Unicode Text' save format: UTF-16 with BOM, tab-delimited."""
+    path = tmp_path / "unicode.txt"
+    path.write_bytes("Unit\tTenant\tRent\n101\tMüller, Jörg\t1,200.00\n102\tLee\t1,300.00\n".encode("utf-16"))
+    r = clean_file(path)
+    assert [x.get("unit") for x in r.rows] == ["101", "102"]
+    assert r.rows[0].get("tenant") == "Müller, Jörg"
+
+
+def test_nul_bytes_are_stripped_not_fatal(tmp_path):
+    """Found by fuzzing on Python 3.10: a NUL byte crashed the csv reader."""
+    path = tmp_path / "nul.csv"
+    path.write_bytes(b"Unit,Tenant,Rent\n101,Le\x00e,1000\n")
+    r = clean_file(path)
+    assert r.rows[0].get("tenant") == "Lee"
