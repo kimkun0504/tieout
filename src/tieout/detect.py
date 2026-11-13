@@ -70,8 +70,7 @@ def detect_header(grid: Grid) -> HeaderInfo:
     """Score each early row (alone, and joined with the row above) and keep the best."""
     best: HeaderInfo | None = None
     for r in range(min(SCAN_ROWS, len(grid.rows))):
-        row = grid.rows[r]
-        if sum(1 for v in row if _looks_like_header_cell(v)) < 2:
+        if sum(1 for c in range(grid.width) if _looks_like_header_cell(grid.merged_value(r, c))) < 2:
             continue
         for use_above in (False, True):
             if use_above and r == 0:
@@ -79,8 +78,9 @@ def detect_header(grid: Grid) -> HeaderInfo:
             headers: dict[int, str] = {}
             matched = 0
             for c in range(grid.width):
-                cur = _text(grid.value(r, c)) if _looks_like_header_cell(grid.value(r, c)) else ""
-                above = _text(grid.value(r - 1, c)) if use_above and _looks_like_header_cell(grid.value(r - 1, c)) else ""
+                cur_v, above_v = grid.merged_value(r, c), grid.merged_value(r - 1, c)
+                cur = _text(cur_v) if _looks_like_header_cell(cur_v) else ""
+                above = _text(above_v) if use_above and _looks_like_header_cell(above_v) else ""
                 text = f"{above} {cur}".strip() if use_above and above and above != cur else cur
                 if not text:
                     continue

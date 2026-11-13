@@ -141,3 +141,51 @@ def test_writes_all_outputs(flat_csv, tmp_path):
         assert p.exists() and p.stat().st_size > 0
     assert paths["csv"].read_text().splitlines()[0].startswith("unit,unit_type,sqft,tenant")
     assert "NEEDS REVIEW" in paths["report"].read_text()
+
+
+# --- regression tests for review findings ------------------------------------------
+
+def _xlsx(tmp_path, rows, merges=(), name="t.xlsx"):
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    for r in rows:
+        ws.append(r)
+    for m in merges:
+        ws.merge_cells(m)
+    path = tmp_path / name
+    wb.save(path)
+    return path
+
+
+def test_merged_section_label_is_not_a_unit(tmp_path):
+    """Finding 2: a section label merged across the row used to fill every column and become a unit."""
+    path = _xlsx(tmp_path, [
+        ["Unit", "Tenant", "Market Rent", "Rent", "Lease Start", "Lease End"],
+        ["Building A"],
+        ["101", "Lee", 1000, 1000, None, None],
+        ["Total", None, 1000, 1000],
+    ], merges=["A2:F2"])
+    r = clean_file(path)
+    assert [x.get("unit") for x in r.rows] == ["101"]
+    assert r.rows[0].section == "Building A"
+    assert r.ok
+
+
+def test_uncomputed_formula_total_is_an_error_not_a_silent_pass(tmp_path):
+    """Finding 7: formulas with no saved result read as empty and skipped the tie-out."""
+    path = _xlsx(tmp_path, [["Unit", "Tenant", "Rent"], ["101", "A", 1000], ["102", "B", 2000], ["Total", None, "=SUM(C2:C3)"]])
+    r = clean_file(path)
+    assert not r.ok
+    issue = next(i for i in r.issues if i.rule == "total_not_checkable")
+    assert issue.refs[0].cell == "C4"
+
+
+def test_csv_quoted_field_keeps_its_line_break(tmp_path):
+    """Finding 13: splitlines() glued multi-line quoted fields together."""
+    path = tmp_path / "ml.csv"
+    path.write_text('Unit,Tenant,Rent\n101,"Lee, Jordan\nc/o Jane Lee",1000\n102,Kim,1100\n', newline="")
+    r = clean_file(path)
+    assert [x.get("unit") for x in r.rows] == ["101", "102"]
+    assert r.rows[0].get("tenant") == "Lee, Jordan c/o Jane Lee"  # whitespace collapsed, words kept apart

@@ -118,6 +118,10 @@ def check_tie_out(rows: list[CleanRow], totals: list[ReportedTotal]) -> list[Iss
     for total in totals:
         for name, reported in total.amounts.items():
             if reported.value is None:
+                if reported.issue:
+                    issues.append(Issue(Severity.ERROR, "total_not_checkable",
+                                        f"'{total.label}' {name} could not be checked: {reported.issue}.",
+                                        total.row, name, [reported.source] if reported.source else []))
                 continue
             spec = FIELDS_BY_NAME.get(name)
             if spec is None or spec.type.value not in ("money", "number"):

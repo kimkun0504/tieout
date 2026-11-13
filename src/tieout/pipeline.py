@@ -16,6 +16,7 @@ from tieout.models import CleanRow, Issue, ReportedTotal, Severity, TracedValue
 from tieout.normalize import is_vacant_marker, parse, tidy_name
 from tieout.schema import FIELDS_BY_NAME, FieldType
 
+UNCOMPUTED_FORMULA = "cell is a formula with no saved result; open the file in Excel and save it again"
 _GRAND_WORDS = ("grand", "property", "portfolio", "report")
 
 
@@ -103,6 +104,8 @@ def _build_row(grid: Grid, r: int, section: str | None, col_for: dict[str, int])
     for name, c in col_for.items():
         raw = grid.value(r, c)
         value, issue = parse(raw, FIELDS_BY_NAME[name].type)
+        if grid.is_uncomputed(r, c):
+            issue = UNCOMPUTED_FORMULA
         row.values[name] = TracedValue(value, raw, grid.ref(r, c), issue=issue)
 
     tenant = row.values.get("tenant")
@@ -128,6 +131,9 @@ def _total_amounts(grid: Grid, r: int, col_for: dict[str, int]) -> dict[str, Tra
     for name, c in col_for.items():
         if FIELDS_BY_NAME[name].type in (FieldType.MONEY, FieldType.NUMBER):
             raw = grid.value(r, c)
+            if grid.is_uncomputed(r, c):
+                out[name] = TracedValue(None, raw, grid.ref(r, c), issue=UNCOMPUTED_FORMULA)
+                continue
             value, _ = parse(raw, FIELDS_BY_NAME[name].type)
             if value is not None:
                 out[name] = TracedValue(value, raw, grid.ref(r, c))
