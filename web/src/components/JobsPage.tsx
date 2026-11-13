@@ -38,25 +38,41 @@ export function JobsPage() {
   );
 }
 
+type Queued = { name: string; state: "waiting" | "reading" | "done" | "failed"; job?: Job; error?: string };
+
 function Upload() {
   const qc = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
   const [asOf, setAsOf] = useState("");
   const [dragging, setDragging] = useState(false);
-  const upload = useMutation({
-    mutationFn: (file: File) => api.upload(file, asOf || undefined),
-    onSuccess: (data) => {
-      qc.setQueryData(jobKey(data.job.id), data);
-      qc.invalidateQueries({ queryKey: ["jobs"] });
-      go({ page: "job", id: data.job.id });
-    },
-  });
+  const [queue, setQueue] = useState<Queued[]>([]);
+  const busy = queue.some((q) => q.state === "waiting" || q.state === "reading");
 
-  const pick = (files: FileList | null) => {
-    const file = files?.[0];
-    if (file) upload.mutate(file);
+  const pick = async (list: FileList | null) => {
+    const files = Array.from(list ?? []);
+    if (files.length === 0 || busy) return;
+    setQueue(files.map((f) => ({ name: f.name, state: "waiting" })));
+    const set = (i: number, patch: Partial<Queued>) =>
+      setQueue((q) => q.map((item, k) => (k === i ? { ...item, ...patch } : item)));
+    // One at a time: the server reads each file fully, and order stays predictable.
+    for (const [i, file] of files.entries()) {
+      set(i, { state: "reading" });
+      try {
+        const data = await api.upload(file, asOf || undefined);
+        qc.setQueryData(jobKey(data.job.id), data);
+        set(i, { state: "done", job: data.job });
+        if (files.length === 1) {
+          setQueue([]);
+          go({ page: "job", id: data.job.id });
+        }
+      } catch (e) {
+        set(i, { state: "failed", error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+    void qc.invalidateQueries({ queryKey: ["jobs"] });
   };
 
+  const done = queue.filter((q) => q.state === "done" || q.state === "failed").length;
   return (
     <div className="space-y-2">
       <div
@@ -68,41 +84,79 @@ function Upload() {
         onDrop={(e) => {
           e.preventDefault();
           setDragging(false);
-          pick(e.dataTransfer.files);
+          void pick(e.dataTransfer.files);
         }}
         className={`flex flex-wrap items-center gap-x-6 gap-y-3 rounded-md border-2 border-dashed px-5 py-6 transition-colors ${
           dragging ? "border-action bg-action/5" : "border-rule bg-surface"
         }`}
       >
         <div className="min-w-0 flex-1">
-          <p className="font-medium">{upload.isPending ? "Reading the file…" : "Drop a rent roll or T-12 here: Excel, CSV or PDF"}</p>
-          <p className="text-sm text-ink-3">Up to 25 MB. PDFs need a text layer (not a scan). The original file is never changed.</p>
+          <p className="font-medium" aria-live="polite">
+            {busy
+              ? `Reading ${queue.length > 1 ? `file ${done + 1} of ${queue.length}` : "the file"}…`
+              : "Drop rent rolls or T-12s here: Excel, CSV or PDF"}
+          </p>
+          <p className="text-sm text-ink-3">
+            One file or a whole folder's worth. Up to 25 MB each. PDFs need a text layer (not a scan). Originals are
+            never changed.
+          </p>
         </div>
-        <label className="flex items-center gap-2 text-sm text-ink-2">
+        <label className="flex flex-col text-sm text-ink-2">
           Report date
           <input
             type="date"
             value={asOf}
             onChange={(e) => setAsOf(e.target.value)}
+            aria-describedby="upload-date-hint"
             className="rounded border border-rule px-2 py-1"
           />
+          <span id="upload-date-hint" className="text-xs text-ink-3">
+            Optional when the file states one
+          </span>
         </label>
-        <Button variant="primary" onClick={() => input.current?.click()} disabled={upload.isPending}>
-          Choose file
+        <Button variant="primary" onClick={() => input.current?.click()} disabled={busy}>
+          Choose files
         </Button>
         <input
           ref={input}
           type="file"
+          multiple
           accept={ACCEPT}
           className="sr-only"
-          aria-label="Rent roll file"
+          aria-label="Rent roll or T-12 files"
           onChange={(e) => {
-            pick(e.target.files);
+            void pick(e.target.files);
             e.target.value = "";
           }}
         />
       </div>
-      <ErrorNote error={upload.error} />
+      {queue.length > 1 && (
+        <ul className="divide-y divide-rule-soft rounded-md border border-rule bg-surface text-sm" aria-label="Uploads">
+          {queue.map((q, i) => (
+            <li key={`${i}-${q.name}`} className="flex items-baseline gap-3 px-4 py-2">
+              {q.job ? (
+                <a href={`#/jobs/${q.job.id}`} className="font-medium text-action hover:underline">
+                  {q.name}
+                </a>
+              ) : (
+                <span className="font-medium">{q.name}</span>
+              )}
+              <span
+                className={`ml-auto ${q.state === "failed" ? "text-err" : q.state === "done" ? "text-tie" : "text-ink-3"}`}
+              >
+                {q.state === "waiting"
+                  ? "Waiting"
+                  : q.state === "reading"
+                    ? "Reading…"
+                    : q.state === "done" && q.job
+                      ? <ResultBadge job={q.job} />
+                      : q.error}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {queue.length === 1 && queue[0]?.state === "failed" && <ErrorNote error={new Error(queue[0].error)} />}
     </div>
   );
 }
@@ -113,6 +167,11 @@ function JobsTable({ jobs }: { jobs: Job[] }) {
     mutationFn: api.remove,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
   });
+  // The same bytes uploaded twice: two reviews of one file can drift apart.
+  const firstBySha = new Map<string, Job>();
+  for (const j of [...jobs].sort((a, b) => a.uploaded_at.localeCompare(b.uploaded_at))) {
+    if (j.sha256 && !firstBySha.has(j.sha256)) firstBySha.set(j.sha256, j);
+  }
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -135,6 +194,7 @@ function JobsTable({ jobs }: { jobs: Job[] }) {
                   {j.filename}
                 </a>
                 <span className="ml-2 text-ink-3">{fmtBytes(j.size)}</span>
+                <DuplicateNote job={j} first={firstBySha.get(j.sha256)} />
               </td>
               <td className="px-4 py-2.5">
                 <ResultBadge job={j} />
@@ -171,6 +231,15 @@ function JobsTable({ jobs }: { jobs: Job[] }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function DuplicateNote({ job, first }: { job: Job; first: Job | undefined }) {
+  if (!first || first.id === job.id) return null;
+  return (
+    <div className="text-xs text-warn">
+      Same file as the upload of {first.filename} on {fmtTimestamp(first.uploaded_at)}
     </div>
   );
 }

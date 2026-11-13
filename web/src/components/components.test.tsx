@@ -148,3 +148,24 @@ describe("T12View", () => {
     expect(screen.getByTitle(/^D5: NOI for Feb 2026/)).toHaveTextContent("150.00");
   });
 });
+
+describe("Upload", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("reads several files one after another and lists each result", async () => {
+    const { api } = await import("../lib/api");
+    const { JobsPage } = await import("./JobsPage");
+    vi.spyOn(api, "jobs").mockResolvedValue([]);
+    const upload = vi
+      .spyOn(api, "upload")
+      .mockResolvedValueOnce({ job: { id: "a", last_ok: true, last_summary: { warnings: 0 } } } as never)
+      .mockRejectedValueOnce(new Error("Unsupported file type .docx"));
+    wrap(<JobsPage />);
+    const files = [new File(["x"], "oak.xlsx"), new File(["y"], "notes.docx")];
+    await userEvent.upload(screen.getByLabelText("Rent roll or T-12 files"), files, { applyAccept: false });
+    expect(await screen.findByText("Unsupported file type .docx")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "oak.xlsx" })).toHaveAttribute("href", "#/jobs/a");
+    expect(screen.getByText("Ties out")).toBeInTheDocument();
+    expect(upload).toHaveBeenCalledTimes(2);
+  });
+});
