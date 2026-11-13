@@ -1,0 +1,17 @@
+<html><body><table>
+<tr><td colspan=6>Oak Court Apartments (oak)</td></tr>
+<tr><td colspan=6>Rent Roll with Lease Charges</td></tr>
+<tr><td>As Of = 10/31/2026</td></tr>
+<tr><td>Printed 11/02/2026 9:14 AM</td></tr>
+<tr><th>Unit</th><th>Unit Type</th><th>Sq Ft</th><th>Resident</th><th>Status</th><th>Market Rent</th><th>Actual Rent</th><th>Lease From</th><th>Lease To</th></tr>
+<tr><td colspan=9>Current/Notice/Vacant Residents</td></tr>
+<tr><td>Apt 101</td><td>1x1</td><td>700</td><td>Garcia, Maria</td><td>Occupied</td><td>$1,500.00</td><td>$1,450.00</td><td>01/01/2026</td><td>12/31/2026</td></tr>
+<tr><td>Apt 102</td><td>1x1</td><td>700</td><td>Lee, Bo</td><td>Occupied-NTV</td><td>$1,500.00</td><td>$1,400.00</td><td>12/01/2025</td><td>11/30/2026</td></tr>
+<tr><td>Apt 103</td><td>2x2</td><td>900</td><td></td><td>Vacant-Unrented</td><td>$1,800.00</td><td>$ -</td><td></td><td></td></tr>
+<tr><td>Total</td><td></td><td>2,300</td><td></td><td></td><td>$4,800.00</td><td>$2,850.00</td><td></td><td></td></tr>
+<tr><td colspan=9>Future Residents/Applicants</td></tr>
+<tr><td>Apt 102</td><td>1x1</td><td>700</td><td>Park, Ji</td><td>Applicant</td><td>$1,500.00</td><td>$1,550.00</td><td>12/01/2026</td><td>11/30/2027</td></tr>
+<tr><td></td></tr>
+<tr><td>Total Units</td><td>3</td></tr>
+<tr><td>Occupancy %</td><td>66.67%</td></tr>
+</table></body></html>
