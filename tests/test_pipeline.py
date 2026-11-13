@@ -1,6 +1,8 @@
 from datetime import date
 from decimal import Decimal
 
+import pytest
+
 from tieout import clean_file
 from tieout.export import write_all
 from tieout.mapping import TemplateStore
@@ -320,3 +322,34 @@ def test_nul_bytes_are_stripped_not_fatal(tmp_path):
     path.write_bytes(b"Unit,Tenant,Rent\n101,Le\x00e,1000\n")
     r = clean_file(path)
     assert r.rows[0].get("tenant") == "Lee"
+
+
+@pytest.mark.parametrize(
+    "a, b, same",
+    [
+        ("101", "Apt 101", True),
+        ("101", "Unit #101", True),
+        ("#101", "101", True),
+        ("A-101", "a 101", True),
+        ("0101", "101", True),
+        ("Suite 300", "300", True),
+        ("101", "102", False),
+        ("101A", "101B", False),
+        ("1010", "101", False),
+        ("PH", "Penthouse", False),
+    ],
+)
+def test_unit_key(a, b, same):
+    from tieout.validate import unit_key
+
+    assert (unit_key(a) == unit_key(b)) is same
+
+
+def test_unit_codes_spelled_differently_are_flagged_as_possible_duplicates():
+    from tieout.ingest import Grid
+
+    rows = [["Unit", "Tenant", "Rent"], ["101", "Ann", 1000], ["Apt 101", "Ann", 1000], ["102", "Bo", 1100]]
+    r = clean_file("x.csv", grid=Grid("x.csv", "x", rows))
+    (issue,) = [i for i in r.issues if i.rule == "possible_duplicate_unit"]
+    assert issue.severity.value == "warning" and "row 2" in issue.message and "row 3" in issue.message
+    assert not [i for i in r.issues if i.rule == "duplicate_unit"]

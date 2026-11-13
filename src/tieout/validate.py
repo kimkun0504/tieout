@@ -124,15 +124,35 @@ def check_parse_issues(rows: list[CleanRow]) -> list[Issue]:
     return issues
 
 
+_UNIT_PREFIX = re.compile(r"^(?:apt\.?|apartment|unit|suite|ste\.?|no\.?|space|#)\s*#?\s*", re.I)
+
+
+def unit_key(unit: object) -> str:
+    """Loose identity for a unit code: "Apt 101", "Unit #101", "#101" and "101" are the same unit;
+    so are "A-101", "A 101" and "a101"; leading zeros in a number don't count ("0101")."""
+    text = str(unit).strip().lower()
+    while True:
+        stripped = _UNIT_PREFIX.sub("", text, count=1)
+        if stripped == text:
+            break
+        text = stripped
+    text = re.sub(r"[\s\-_./]+", "", text)
+    return re.sub(r"(?<![0-9])0+(?=\d)", "", text) or text
+
+
 def check_duplicates(rows: list[CleanRow]) -> list[Issue]:
-    seen: dict[str, list[CleanRow]] = defaultdict(list)
+    """Exact repeats of a unit code are errors; codes that differ only in spelling are warnings."""
+    exact: dict[str, list[CleanRow]] = defaultdict(list)
+    loose: dict[str, list[CleanRow]] = defaultdict(list)
     for row in rows:
         unit = row.get("unit")
         if unit:
             # Same unit number in different buildings is legitimate.
-            seen[f"{row.section or ''}::{str(unit).strip().lower()}"].append(row)
+            scope = row.section or ""
+            exact[f"{scope}::{str(unit).strip().lower()}"].append(row)
+            loose[f"{scope}::{unit_key(unit)}"].append(row)
     issues = []
-    for dup_rows in seen.values():
+    for dup_rows in exact.values():
         if len(dup_rows) > 1:
             unit = dup_rows[0].get("unit")
             src = [str(r.source_row) for r in dup_rows]
@@ -141,6 +161,19 @@ def check_duplicates(rows: list[CleanRow]) -> list[Issue]:
                     Severity.ERROR,
                     "duplicate_unit",
                     f"Unit '{unit}' appears {len(dup_rows)} times (rows {', '.join(src)}).",
+                    dup_rows[1].source_row,
+                    "unit",
+                )
+            )
+    for dup_rows in loose.values():
+        spellings = {str(r.get("unit")).strip().lower() for r in dup_rows}
+        if len(spellings) > 1:
+            names = ", ".join(f"'{r.get('unit')}' (row {r.source_row})" for r in dup_rows)
+            issues.append(
+                Issue(
+                    Severity.WARNING,
+                    "possible_duplicate_unit",
+                    f"These unit codes may be the same unit written differently: {names}.",
                     dup_rows[1].source_row,
                     "unit",
                 )
