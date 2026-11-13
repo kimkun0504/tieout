@@ -38,19 +38,29 @@ docker run -p 8000:8000 -v tieout-data:/data tieout
 
 | Part | What it does |
 | --- | --- |
-| Totals strip | Each reported total next to what its units add up to; the gap is called out |
+| Totals strip | Each reported total next to what its units add up to, and the report's footer figures (unit count, occupancy) against the units read; gaps are called out |
 | Stacking plan | Every unit as a tile, shaded by status, marked where problems are |
 | Monthly figures | Physical and economic occupancy, gross potential rent, loss to lease, vacancy loss, concessions, unit mix, 12-month lease expirations |
 | To review | Open errors and warnings; accept with a required note, or reopen |
-| Units | Cleaned table; derived cells tinted blue, corrections amber, problems underlined |
+| Units | Cleaned table, filterable by status; derived cells tinted blue, corrections amber, problems underlined |
 | Inspector | For any value: raw text, source cell, how it was derived, its problem, and a correction form that requires a reason |
 | Original file | The sheet exactly as uploaded, with the selected cell highlighted |
 | Column mapping | Change how a column is read; save the mapping as a template for that export format |
 | Changes | Who corrected, accepted or remapped what, and when |
 
-Exports: Excel workbook (Rent Roll, Issues, Summary), CSV, JSON with full provenance, issues CSV, Markdown report, and **records for AI** (JSONL): one record per unit with plain-sentence text for embedding, typed fields, and metadata tracing every value to its cell, with an option to remove tenant names. The command line also writes a [Frictionless Data Package](https://datapackage.org/) (`*.datapackage.json`) describing both CSVs with typed fields, so pandas, DuckDB and data catalogs load them without guessing types. All text files are UTF-8.
+Exports: Excel workbook (Rent Roll, Issues, Summary), CSV, JSON with full provenance, issues CSV, Markdown report, and **records for AI** (JSONL): one record per unit with plain-sentence text for embedding, typed fields, and metadata tracing every value to its cell, with an option to remove tenant names. "Everything (zip)" and the command line also include a [Frictionless Data Package](https://datapackage.org/) (`*.datapackage.json`) describing both CSVs with typed fields, so pandas, DuckDB and data catalogs load them without guessing types. All text files are UTF-8. Upload several files at once; byte-identical re-uploads are marked.
 
 The app is a single-user local tool: it binds to `127.0.0.1` and has no authentication. Put it behind an authenticating proxy before exposing it to a network. Built-in protections: it answers only to known host names (`TIEOUT_ALLOWED_HOSTS`, default `localhost,127.0.0.1`) against DNS rebinding, refuses state-changing requests from other websites (CSRF), sends a strict Content-Security-Policy and related headers, limits uploads to 25 MB, refuses zip-bomb workbooks, and writes CSV/Excel exports so cell text can never run as a formula.
+
+## What it checks
+
+- **Tie-out**: every subtotal and total row equals the units it covers (rent, market rent, square feet, deposits, charges).
+- **Footer figures**: "Total Units", "Occupied", "Vacant" and "Occupancy %" printed at the bottom agree with the units read.
+- **Units**: duplicates (also "101" vs "Apt 101"), occupied without rent or tenant, vacant with rent, rent far from market, rent per square foot far from comparable units.
+- **Leases**: end before start, expired but occupied, move-in after the report date. The report date is read from the file ("As of …") unless you set one.
+- **Two ways of stating one number**: annual vs monthly rent, rent column vs rent charge lines, rent per square foot vs area × rent.
+- **Future and applicant leases** are kept, marked `future`, and left out of unit counts, occupancy and rent.
+- Anything that can't be read exactly is flagged, never guessed: European number formats, partial dates, unknown statuses, formulas with no saved result.
 
 ## How it works
 
@@ -133,9 +143,9 @@ CI runs all of the above on Python 3.10 to 3.13, builds the web app and the Dock
 ## Roadmap
 
 - [ ] OCR for scanned PDFs (text-based PDFs are supported)
-- [ ] Reviewer corrections for T-12 statements (rent rolls have them)
+- [ ] Reviewer corrections for T-12 statements (accepting issues with a note works today)
 - [ ] Multi-user: authentication, roles, shared templates
-- [ ] Export to common underwriting templates and RAG-ready JSONL
+- [ ] Export to common underwriting templates
 
 ## Data
 
