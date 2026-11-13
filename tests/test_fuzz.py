@@ -75,7 +75,7 @@ header = st.sampled_from(
 def test_pipeline_survives_random_csv(tmp_path_factory, headers, body, title_rows):
     path = tmp_path_factory.mktemp("fuzz") / "random.csv"
     buf = io.StringIO()
-    w = csv.writer(buf)
+    w = csv.writer(buf, quoting=csv.QUOTE_ALL, escapechar="\\")  # 3.10 needs an escapechar for some text
     for i in range(title_rows):
         w.writerow([f"Report title {i}"])
     w.writerow(headers)
