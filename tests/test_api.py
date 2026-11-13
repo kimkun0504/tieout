@@ -11,7 +11,7 @@ from tieout.api import create_app
 
 @pytest.fixture
 def client(tmp_path):
-    return TestClient(create_app(tmp_path / "data"))
+    return TestClient(create_app(tmp_path / "data", allowed_hosts=["testserver", "localhost"]))
 
 
 def upload(client, path, **form):
@@ -235,3 +235,31 @@ def test_compare_endpoint(client, tmp_path, flat_csv):
     assert body["t12"]["last_month"] == "2026-10"
     assert {c["metric"] for c in body["checks"]} == {"gross_potential_rent", "rent_in_place", "economic_occupancy"}
     assert client.get("/api/compare", params={"rent_roll": t12, "t12": rr}).status_code == 422
+
+
+def test_dns_rebinding_host_is_refused(client):
+    assert client.get("/api/health", headers={"host": "evil.example"}).status_code == 400
+    assert client.get("/api/health", headers={"host": "localhost:8000"}).status_code == 200
+
+
+def test_cross_site_writes_are_refused(client, flat_csv):
+    with open(flat_csv, "rb") as f:
+        r = client.post("/api/jobs", files={"file": ("x.csv", f)}, headers={"origin": "https://evil.example"})
+    assert r.status_code == 403
+    assert client.get("/api/jobs").json() == []
+    with open(flat_csv, "rb") as f:  # same-origin browser request
+        assert (
+            client.post("/api/jobs", files={"file": ("x.csv", f)}, headers={"origin": "http://testserver"}).status_code
+            == 201
+        )
+    # reads are unaffected
+    assert client.get("/api/health", headers={"origin": "https://evil.example"}).status_code == 200
+
+
+def test_default_allowed_hosts(monkeypatch):
+    from tieout.api import allowed_hosts_from_env
+
+    monkeypatch.delenv("TIEOUT_ALLOWED_HOSTS", raising=False)
+    assert allowed_hosts_from_env() == ["localhost", "127.0.0.1", "[::1]"]
+    monkeypatch.setenv("TIEOUT_ALLOWED_HOSTS", "tieout.internal, localhost")
+    assert allowed_hosts_from_env() == ["tieout.internal", "localhost"]

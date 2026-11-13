@@ -12,6 +12,8 @@ RUN mkdir -p ../src/tieout && npm run build
 # --- python runtime ----------------------------------------------------------
 FROM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+# Host names the app answers to (DNS-rebinding protection). Add yours, e.g. "localhost,tieout.example.com".
+ENV TIEOUT_ALLOWED_HOSTS="localhost,127.0.0.1"
 WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY src/ src/

@@ -43,7 +43,7 @@ docker run -p 8000:8000 -v tieout-data:/data tieout
 
 Exports: Excel workbook (Rent Roll, Issues, Summary), CSV, JSON with full provenance, issues CSV, Markdown report, and **records for AI** (JSONL): one record per unit with plain-sentence text for embedding, typed fields, and metadata tracing every value to its cell, with an option to remove tenant names.
 
-The app is a single-user local tool: it binds to `127.0.0.1` and has no authentication. Put it behind an authenticating proxy before exposing it to a network.
+The app is a single-user local tool: it binds to `127.0.0.1` and has no authentication. Put it behind an authenticating proxy before exposing it to a network. Built-in protections: it answers only to known host names (`TIEOUT_ALLOWED_HOSTS`, default `localhost,127.0.0.1`) against DNS rebinding, refuses state-changing requests from other websites (CSRF), sends a strict Content-Security-Policy and related headers, limits uploads to 25 MB, refuses zip-bomb workbooks, and writes CSV/Excel exports so cell text can never run as a formula.
 
 ## How it works
 

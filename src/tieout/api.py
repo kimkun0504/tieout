@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import io
 import logging
+import os
 import re
 import time
 import uuid
@@ -19,12 +20,14 @@ from dataclasses import asdict
 from datetime import date, datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from tieout import __version__
 from tieout.export import render_report, write_csv, write_issues, write_json, write_jsonl, write_xlsx
@@ -80,10 +83,36 @@ def _job_view(meta: JobMeta) -> dict[str, Any]:
     return {k: v for k, v in asdict(meta).items() if k != "sha256"} | {"sha256": meta.sha256[:12]}
 
 
-def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
+DEFAULT_ALLOWED_HOSTS = ("localhost", "127.0.0.1", "[::1]")
+UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+def allowed_hosts_from_env() -> list[str]:
+    raw = os.environ.get("TIEOUT_ALLOWED_HOSTS", "")
+    return [h.strip() for h in raw.split(",") if h.strip()] or list(DEFAULT_ALLOWED_HOSTS)
+
+
+def create_app(data_dir: str | Path = "tieout-data", allowed_hosts: list[str] | None = None) -> FastAPI:
     store = JobStore(data_dir)
     app = FastAPI(title="tieout", version=__version__)
+    hosts = allowed_hosts if allowed_hosts is not None else allowed_hosts_from_env()
     app.add_middleware(GZipMiddleware, minimum_size=2048)
+    # DNS rebinding: a hostile site resolving its own name to 127.0.0.1 is refused by Host.
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
+
+    @app.middleware("http")
+    async def _same_origin_writes(request: Request, call_next: Any) -> Any:
+        """Refuse state-changing requests sent by other websites (CSRF).
+
+        Browsers attach Origin to cross-site POSTs, including plain form uploads that
+        skip the CORS preflight. Requests without Origin (curl, scripts) are allowed.
+        """
+        origin = request.headers.get("origin")
+        if request.method in UNSAFE_METHODS and origin:
+            origin_host = urlsplit(origin).hostname or ""
+            if origin_host != request.url.hostname and "*" not in hosts:
+                return JSONResponse({"detail": "Cross-site request refused."}, status_code=403)
+        return await call_next(request)
 
     @app.middleware("http")
     async def _headers_and_logging(request: Request, call_next: Any) -> Any:
