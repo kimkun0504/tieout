@@ -51,7 +51,7 @@ def test_values_are_typed_and_tidied(stacked_xlsx):
     assert third.get("lease_start") == date(2026, 3, 1)  # parsed from text "3/1/2026"
     b101 = r.rows[3]
     assert b101.get("unit") == "101"  # numeric 101 in Excel becomes text "101"
-    assert b101.get("tenant") == "O'brien, Sean"
+    assert b101.get("tenant") == "O'Brien, Sean"
 
 
 def test_vacant_marker_in_tenant_column_becomes_status(stacked_xlsx):
