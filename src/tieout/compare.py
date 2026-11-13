@@ -24,7 +24,7 @@ from tieout.t12 import Statement
 
 OK_PCT = Decimal("0.02")  # within 2%: consistent
 WARN_PCT = Decimal("0.05")  # beyond 5%: needs explaining
-NET_RENT_CATEGORIES = ("gross_potential_rent", "loss_to_lease", "vacancy", "concessions")
+NET_RENT_CATEGORIES = ("gross_potential_rent", "loss_to_lease", "vacancy", "concessions", "rental_income")
 
 
 @dataclass

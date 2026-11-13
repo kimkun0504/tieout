@@ -50,18 +50,27 @@ CATEGORIES: list[tuple[str, str, str]] = [
     (
         "income",
         "other_income",
-        r"parking|pet|late|fee|laundry|storage|utility reimb|rubs|application|admin fee|other income|misc",
+        r"parking|pet|late|fee|laundry|storage|utility reimb|rubs|application|admin fee|other income|misc"
+        r"|^other$|interest income|damages|cleaning fee|month.to.month|mtm|vending|cable revenue"
+        r"|recover|\bcam\b|reimburs",
     ),
+    # A plain "Rent" or "Rental revenue" line: usually rent billed or collected, not gross potential.
+    # Checked after other income so "Parking rent" and "Pet rent" stay other income.
+    ("income", "rental_income", r"\brent(s|al)?\b|\brevenue\b.*\brent|\bresidential\b|\bcommercial\b"),
     ("expense", "payroll", r"payroll|salar|wage|benefit|bonus|staff"),
-    ("expense", "repairs_maintenance", r"repair|maint|r\s*&\s*m\b"),
+    ("expense", "repairs_maintenance", r"repair|maint|r\s*&\s*m\b|supplies|hvac|plumbing|painting|appliance"),
     ("expense", "turnover", r"turnover|make.?ready|unit turn"),
-    ("expense", "contract_services", r"contract|landscap|pest|snow|janitor|security|elevator|pool"),
-    ("expense", "utilities", r"utilit|electric|water|sewer|\bgas\b|trash|refuse|cable|internet"),
+    ("expense", "contract_services", r"contract|landscap|pest|snow|janitor|security|elevator|pool|cleaning|grounds"),
+    ("expense", "utilities", r"utilit|electric|water|sewer|\bgas\b|trash|refuse|cable|internet|heat|fuel|\boil\b"),
     ("expense", "management_fee", r"management fee|mgmt fee|property management"),
-    ("expense", "real_estate_taxes", r"real estate tax|property tax|\btaxes\b"),
+    ("expense", "real_estate_taxes", r"real estate tax|property tax|\btax(es)?\b"),
     ("expense", "insurance", r"insurance"),
     ("expense", "marketing", r"marketing|advertis|promotion"),
-    ("expense", "general_admin", r"general|admin|office|legal|professional|accounting|telephone|software"),
+    (
+        "expense",
+        "general_admin",
+        r"general|admin|office|legal|professional|accounting|telephone|software|bank|dues|subscription|postage|travel",
+    ),
     ("expense", "replacement_reserves", r"reserve"),
 ]
 _CATEGORY_RES = [(sec, cat, re.compile(rx, re.I)) for sec, cat, rx in CATEGORIES]

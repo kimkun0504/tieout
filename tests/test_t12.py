@@ -172,3 +172,30 @@ def test_one_wrong_subtotal_is_one_error(tmp_path):
     errors = [i for i in s.issues if i.severity.value == "error"]
     assert [i.rule for i in errors] == ["t12_subtotal_mismatch"]
     assert "Feb 2026" in errors[0].message
+
+
+@pytest.mark.parametrize(
+    "name, section, expected",
+    [
+        ("Rent", "income", "rental_income"),
+        ("Rental Revenue", "income", "rental_income"),
+        ("Residential Rents", "income", "rental_income"),
+        ("Gross Potential Rent", "income", "gross_potential_rent"),
+        ("Rent Concessions", "income", "concessions"),
+        ("Parking Rent", "income", "other_income"),
+        ("Pet Rent", "income", "other_income"),
+        ("CAM Recoveries", "income", "other_income"),
+        ("Other", "income", "other_income"),
+        ("Payroll Taxes", "expense", "payroll"),
+        ("Taxes - Property", "expense", "real_estate_taxes"),
+        ("Heating Oil", "expense", "utilities"),
+        ("Cleaning", "expense", "contract_services"),
+        ("Maintenance Supplies", "expense", "repairs_maintenance"),
+        ("Bank Charges", "expense", "general_admin"),
+        ("Other", "expense", None),
+    ],
+)
+def test_common_line_names_get_categories(name, section, expected):
+    from tieout.t12 import categorize
+
+    assert categorize(name, section) == expected
