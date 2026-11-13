@@ -41,7 +41,7 @@ docker run -p 8000:8000 -v tieout-data:/data tieout
 | Column mapping | Change how a column is read; save the mapping as a template for that export format |
 | Changes | Who corrected, accepted or remapped what, and when |
 
-Exports: Excel workbook (Rent Roll, Issues, Summary), CSV, JSON with full provenance, issues CSV, Markdown report.
+Exports: Excel workbook (Rent Roll, Issues, Summary), CSV, JSON with full provenance, issues CSV, Markdown report, and **records for AI** (JSONL): one record per unit with plain-sentence text for embedding, typed fields, and metadata tracing every value to its cell, with an option to remove tenant names.
 
 The app is a single-user local tool: it binds to `127.0.0.1` and has no authentication. Put it behind an authenticating proxy before exposing it to a network.
 
@@ -77,9 +77,22 @@ file ─> ingest ─> detect header ─> map columns ─> classify rows ─> bui
 - **Everything is traceable.** Each value carries its raw text and cell; rolled-up values carry every cell they came from.
 - **Money is exact.** Decimal arithmetic, half-up rounding, decimal strings in JSON.
 
+## Optional: Claude for unfamiliar headers
+
+When a column header matches no rule, tieout can ask Claude to place it:
+
+```bash
+pip install -e ".[llm]"
+export ANTHROPIC_API_KEY=...
+tieout clean file.xlsx --llm          # CLI
+TIEOUT_LLM=1 tieout serve             # web app
+```
+
+Only header names and the *shape* of sample values ("money-like", "date-like", "short text") are sent, never the values, so tenant names and amounts stay on your machine. Suggestions are capped below rule confidence and shown for review; any API error means no suggestion. Save the confirmed mapping as a template and the model is never asked about that export format again. The default model is `claude-haiku-5-5` (override with `TIEOUT_LLM_MODEL`).
+
 ## Canonical schema
 
-`unit`, `unit_type`, `sqft`, `tenant`, `status` (occupied / vacant / notice / model / down), `market_rent`, `current_rent`, `concessions`, `other_charges`, `total_charges`, `deposit`, `move_in`, `lease_start`, `lease_end`. Charge-line layouts also read `charge_code` and `charge_amount`.
+`unit`, `unit_type`, `sqft`, `tenant`, `status` (occupied / vacant / notice / model / down), `market_rent`, `current_rent`, `annual_rent`, `concessions`, `other_charges`, `total_charges`, `deposit`, `move_in`, `lease_start`, `lease_end`. Charge-line layouts also read `charge_code` and `charge_amount`.
 
 ## Development
 
@@ -96,7 +109,6 @@ CI runs all of the above on Python 3.10 to 3.13, builds the web app and the Dock
 ## Roadmap
 
 - [ ] OCR for scanned PDFs (text-based PDFs are supported)
-- [ ] LLM `HeaderMapper` for unseen layouts (interface in place, capped below rule confidence)
 - [ ] T-12 operating statement support
 - [ ] Multi-user: authentication, roles, shared templates
 - [ ] Export to common underwriting templates and RAG-ready JSONL

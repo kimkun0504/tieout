@@ -80,6 +80,9 @@ class JobStore:
         self._grids: OrderedDict[tuple[str, str | None], Grid] = OrderedDict()
         self._grids_guard = threading.Lock()
         self.grid_cache_size = 8
+        from tieout.llm import mapper_from_env
+
+        self.mapper = mapper_from_env()  # None unless TIEOUT_LLM=1 and an API key are set
 
     # --- paths and locking ------------------------------------------------------
 
@@ -176,6 +179,7 @@ class JobStore:
             self.source_path(job_id),
             sheet=meta.sheet,
             templates=self.templates,
+            mapper=self.mapper,
             as_of=date.fromisoformat(meta.as_of) if meta.as_of else None,
             review=self.review(job_id),
             source_name=meta.filename,

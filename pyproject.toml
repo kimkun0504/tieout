@@ -15,6 +15,7 @@ dependencies = [
 
 [project.optional-dependencies]
 pdf = ["pdfplumber>=0.11"]
+llm = ["anthropic>=0.40"]
 server = ["tieout[pdf]", "fastapi>=0.110", "uvicorn[standard]>=0.27", "python-multipart>=0.0.9"]
 dev = [
     "tieout[server]",
