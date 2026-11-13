@@ -106,8 +106,8 @@ def _summary_row(filled: list[tuple[int, Any]], unit_col: int, unit_text: str) -
     label_cell = (c0, _text(v0))
     if c0 > unit_col or _is_number_like(label_cell[1]) or any(ch.isdigit() for ch in label_cell[1]):
         return None
-    if unit_text and unit_text != label_cell[1]:
-        return None  # the unit column holds something else: this is a unit row
+    if unit_text and unit_text != label_cell[1] and not _is_number_like(unit_text):
+        return None  # the unit column holds a code: this is a unit row (a figure there is the statistic's)
     figures = [c for c, v in filled if c > label_cell[0] and (isinstance(v, (int, float)) or _is_number_like(_text(v)))]
     if not figures or len(filled) > 4:
         return None

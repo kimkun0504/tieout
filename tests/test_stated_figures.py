@@ -79,3 +79,18 @@ def test_unit_missing_its_code_is_not_mistaken_for_a_vacancy_count():
     rows = [H, *UNITS, [None, "VACANT", None, 700, 1500]]
     r = clean_file("x.csv", grid=Grid("x.csv", "x", rows))
     assert not _rules(r)
+
+
+def test_footer_when_the_unit_column_is_not_the_first():
+    header = ["Bldg", "Unit", "Tenant", "Status", "Rent"]
+    rows = [
+        header,
+        ["A", "101", "Ann", "Occupied", 1000],
+        ["A", "102", None, "Vacant", 0],
+        [],
+        ["Total Units", 2],  # the figure sits in the unit column
+        ["Occupied Units", 1],
+    ]
+    r = clean_file("x.csv", grid=Grid("x.csv", "x", rows))
+    assert [row.get("unit") for row in r.rows] == ["101", "102"]
+    assert _rules(r) == [("info", "stated_figure_ties")] * 2
