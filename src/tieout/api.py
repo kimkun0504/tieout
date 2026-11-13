@@ -139,8 +139,8 @@ def create_app(data_dir: str | Path = "tieout-data", allowed_hosts: list[str] | 
         payload = store.payload(job_id)
         return {"job": _job_view(store.meta(job_id)), "result": payload}
 
-    def mutate(job_id: str, author: str, fn: Any) -> dict[str, Any]:
-        if store.meta(job_id).document_type == "t12":
+    def mutate(job_id: str, author: str, fn: Any, t12_ok: bool = False) -> dict[str, Any]:
+        if store.meta(job_id).document_type == "t12" and not t12_ok:
             raise HTTPException(409, "Corrections and mappings are available for rent rolls only, not T-12 statements.")
         with store.lock(job_id):
             review = store.review(job_id)
@@ -267,11 +267,11 @@ def create_app(data_dir: str | Path = "tieout-data", allowed_hosts: list[str] | 
 
     @app.post("/api/jobs/{job_id}/acknowledgments")
     def acknowledge(job_id: str, body: AckIn, x_tieout_user: str = Header("")) -> dict[str, Any]:
-        return mutate(job_id, x_tieout_user, lambda r, a: r.acknowledge(body.issue_id, body.note, a))
+        return mutate(job_id, x_tieout_user, lambda r, a: r.acknowledge(body.issue_id, body.note, a), t12_ok=True)
 
     @app.delete("/api/jobs/{job_id}/acknowledgments/{issue_id}")
     def unacknowledge(job_id: str, issue_id: str, x_tieout_user: str = Header("")) -> dict[str, Any]:
-        return mutate(job_id, x_tieout_user, lambda r, a: r.unacknowledge(issue_id, a))
+        return mutate(job_id, x_tieout_user, lambda r, a: r.unacknowledge(issue_id, a), t12_ok=True)
 
     @app.post("/api/jobs/{job_id}/template", status_code=201)
     def save_template(job_id: str, body: TemplateIn) -> dict[str, str]:

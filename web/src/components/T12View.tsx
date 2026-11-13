@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
-import { fmtMoney, fmtMonth, fmtPct, ruleLabel } from "../lib/format";
+import { fmtMoney, fmtMonth, fmtPct } from "../lib/format";
 import type { Issue, T12Line, T12Response } from "../lib/types";
 import { ComparePanel } from "./ComparePanel";
 import { Check } from "./JobsPage";
-import { Empty, SeverityMark } from "./ui";
+import { IssueItem } from "./IssueQueue";
+import { Empty } from "./ui";
 
 const CHECKS: { rule: string; title: string; what: string }[] = [
   { rule: "t12_row_total_mismatch", title: "Across", what: "Each line's months add up to its Total" },
@@ -87,7 +88,8 @@ export function T12View({ data }: { data: T12Response }) {
 
       <section aria-label="Tie-out checks" className="grid gap-px overflow-hidden rounded-md border border-rule bg-rule-soft sm:grid-cols-3">
         {CHECKS.map((c) => {
-          const misses = result.issues.filter((i) => i.rule === c.rule);
+          const all = result.issues.filter((i) => i.rule === c.rule);
+          const misses = all.filter((i) => !i.acknowledgment);
           return (
             <div key={c.rule} className={`bg-surface px-4 py-3 ${misses.length ? "shadow-[inset_0_-3px_0_var(--color-err)]" : ""}`}>
               <div className="text-sm text-ink-2">
@@ -95,7 +97,7 @@ export function T12View({ data }: { data: T12Response }) {
               </div>
               {misses.length === 0 ? (
                 <div className="mt-1 inline-flex items-center gap-1 font-medium text-tie">
-                  <Check /> ties
+                  <Check /> {all.length ? `${all.length} accepted` : "ties"}
                 </div>
               ) : (
                 <button
@@ -195,23 +197,7 @@ export function T12View({ data }: { data: T12Response }) {
             ) : (
               <ul className="max-h-96 divide-y divide-rule-soft overflow-y-auto">
                 {result.issues.map((i) => (
-                  <li key={i.id}>
-                    <button
-                      onClick={() => setSelected(i.cells[0] ?? null)}
-                      className={`flex w-full gap-2.5 px-4 py-2.5 text-left hover:bg-paper ${
-                        i.cells[0] && i.cells[0] === selected ? "bg-action/5" : ""
-                      }`}
-                    >
-                      <span className="mt-1.5">
-                        <SeverityMark severity={i.severity} />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="text-sm font-medium">{ruleLabel(i.rule)}</span>
-                        {i.row !== null && <span className="ml-2 text-xs text-ink-3">row {i.row}</span>}
-                        <span className="block text-sm text-ink-2">{i.message}</span>
-                      </span>
-                    </button>
-                  </li>
+                  <IssueItem key={i.id} jobId={job.id} issue={i} onSelect={() => setSelected(i.cells[0] ?? null)} />
                 ))}
               </ul>
             )}

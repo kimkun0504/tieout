@@ -115,7 +115,8 @@ class Statement:
 
     @property
     def ok(self) -> bool:
-        return not any(i.severity is Severity.ERROR for i in self.issues)
+        """No error left open (an accepted error doesn't count)."""
+        return not any(i.severity is Severity.ERROR and i.open for i in self.issues)
 
     def items(self, section: str | None = None) -> list[Line]:
         return [ln for ln in self.lines if ln.kind == "line" and (section is None or ln.section == section)]
@@ -137,8 +138,9 @@ class Statement:
             "expense_ratio": round(float(expense / income), 4) if income else None,
             "by_category": {k: str(v) for k, v in sorted(by_cat.items())},
             "uncategorized": sum(1 for ln in self.items() if not ln.category),
-            "errors": sum(1 for i in self.issues if i.severity is Severity.ERROR),
-            "warnings": sum(1 for i in self.issues if i.severity is Severity.WARNING),
+            "errors": sum(1 for i in self.issues if i.severity is Severity.ERROR and i.open),
+            "warnings": sum(1 for i in self.issues if i.severity is Severity.WARNING and i.open),
+            "acknowledged": sum(1 for i in self.issues if not i.open),
         }
 
 

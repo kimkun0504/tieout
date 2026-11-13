@@ -202,6 +202,9 @@ class JobStore:
         grid = self.grid(job_id)
         if is_t12(grid):
             stmt = read_t12(grid)
+            review = self.review(job_id)
+            for issue in stmt.issues:
+                issue.acknowledgment = review.ack_for(issue.id)
             meta = self.meta(job_id)
             s = stmt.summary()
             summary = {
@@ -220,5 +223,5 @@ class JobStore:
             if meta.document_type != "t12" or meta.last_summary != summary or meta.last_ok != stmt.ok:
                 meta.document_type, meta.last_summary, meta.last_ok = "t12", summary, stmt.ok
                 self.save_meta(meta)
-            return {**t12_payload(stmt), "tieout_version": __version__}
+            return {**t12_payload(stmt), "tieout_version": __version__, "review": review.to_dict()}
         return to_payload(self.run(job_id))

@@ -263,3 +263,20 @@ def test_default_allowed_hosts(monkeypatch):
     assert allowed_hosts_from_env() == ["localhost", "127.0.0.1", "[::1]"]
     monkeypatch.setenv("TIEOUT_ALLOWED_HOSTS", "tieout.internal, localhost")
     assert allowed_hosts_from_env() == ["tieout.internal", "localhost"]
+
+
+def test_t12_issues_can_be_accepted_with_a_note(client, tmp_path):
+    from samples import make_t12_xlsx
+
+    body = upload(client, make_t12_xlsx(tmp_path / "t.xlsx", noi_off_by=250)).json()
+    jid, [issue] = body["job"]["id"], [i for i in body["result"]["issues"] if i["severity"] == "error"]
+    r = client.post(
+        f"/api/jobs/{jid}/acknowledgments", json={"issue_id": issue["id"], "note": "Accrual reversal in Dec"}
+    )
+    assert r.status_code == 200
+    result = r.json()["result"]
+    assert result["ok"] is True and result["summary"]["acknowledged"] == 1
+    assert result["review"]["audit"][-1]["action"] == "acknowledge"
+    assert client.get("/api/jobs").json()[0]["last_ok"] is True
+    r = client.delete(f"/api/jobs/{jid}/acknowledgments/{issue['id']}")
+    assert r.json()["result"]["ok"] is False

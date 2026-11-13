@@ -236,6 +236,7 @@ export interface T12Result {
     uncategorized: number;
     errors: number;
     warnings: number;
+    acknowledged?: number;
   };
   lines: T12Line[];
   issues: Issue[];
