@@ -166,18 +166,42 @@ def clean_file(
 # --- mapping ------------------------------------------------------------------------
 
 
+def override_keys(mappings: list[ColumnMapping]) -> dict[int, str]:
+    """Column -> the key reviewer overrides use: the header text, or "Rent #2" for a repeated header."""
+    seen: dict[str, int] = {}
+    keys = {}
+    for m in sorted(mappings, key=lambda m: m.column):
+        seen[m.header] = seen.get(m.header, 0) + 1
+        keys[m.column] = m.header if seen[m.header] == 1 else f"{m.header} #{seen[m.header]}"
+    return keys
+
+
 def _apply_overrides(mappings: list[ColumnMapping], overrides: dict[str, str | None]) -> list[ColumnMapping]:
-    """Reviewer overrides win. A field moved to a new column is removed from its old one."""
+    """Reviewer overrides win. A field moved to a new column is removed from its old one.
+
+    Overrides are keyed by header text, with "#2", "#3" for repeated headers, so two
+    columns both called "Rent" can be told apart. If two overrides name the same
+    field, the left-most column keeps it.
+    """
     if not overrides:
         return mappings
-    forced = {m.column: overrides[m.header] for m in mappings if m.header in overrides}
-    forced_fields = {f for f in forced.values() if f}
+    keys = override_keys(mappings)
+    forced: dict[int, str | None] = {}
+    claimed: set[str] = set()
+    for m in sorted(mappings, key=lambda m: m.column):
+        if keys[m.column] in overrides:
+            f = overrides[keys[m.column]]
+            if f is not None and f in claimed:
+                f = None
+            forced[m.column] = f
+            if f:
+                claimed.add(f)
     out = []
     for m in mappings:
         if m.column in forced:
             f = forced[m.column]
             out.append(ColumnMapping(m.column, m.header, f, 1.0 if f else 0.0, "override" if f else "unmapped"))
-        elif m.field in forced_fields:
+        elif m.field in claimed:
             out.append(ColumnMapping(m.column, m.header, None, 0.0, "unmapped"))
         else:
             out.append(m)

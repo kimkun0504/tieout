@@ -45,12 +45,12 @@ export function MappingTable({ jobId, result }: { jobId: string; result: Result 
               return (
                 <tr key={m.column} className="border-b border-rule-soft last:border-0">
                   <td className="px-4 py-2 text-ink-3">{colLetter(m.column - 1)}</td>
-                  <td className="px-4 py-2 font-medium">{m.header}</td>
+                  <td className="px-4 py-2 font-medium">{m.key}</td>
                   <td className="px-4 py-2">
                     <select
                       value={m.field ?? ""}
                       aria-label={`Field for column ${m.header}`}
-                      onChange={(e) => setMapping.mutate({ header: m.header, field: e.target.value || null })}
+                      onChange={(e) => setMapping.mutate({ header: m.key, field: e.target.value || null })}
                       className={`rounded border px-2 py-1 ${weak ? "border-warn" : "border-rule"} ${m.field ? "" : "text-ink-3"}`}
                     >
                       <option value="">Not used</option>
@@ -66,8 +66,8 @@ export function MappingTable({ jobId, result }: { jobId: string; result: Result 
                     {weak && <span className="ml-1 text-warn">({Math.round(m.confidence * 100)}% sure)</span>}
                   </td>
                   <td className="px-4 py-2 text-right">
-                    {m.header in overrides && (
-                      <Button variant="quiet" onClick={() => reset.mutate(m.header)}>
+                    {m.key in overrides && (
+                      <Button variant="quiet" onClick={() => reset.mutate(m.key)}>
                         Use automatic
                       </Button>
                     )}

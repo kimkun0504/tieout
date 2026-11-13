@@ -124,6 +124,7 @@
       "confidence": 1.0,
       "field": "unit",
       "header": "Unit",
+      "key": "Unit",
       "method": "synonym"
     },
     {
@@ -131,6 +132,7 @@
       "confidence": 1.0,
       "field": "unit_type",
       "header": "Unit Type",
+      "key": "Unit Type",
       "method": "synonym"
     },
     {
@@ -138,6 +140,7 @@
       "confidence": 1.0,
       "field": "sqft",
       "header": "Sq Ft",
+      "key": "Sq Ft",
       "method": "synonym"
     },
     {
@@ -145,6 +148,7 @@
       "confidence": 1.0,
       "field": "tenant",
       "header": "Resident",
+      "key": "Resident",
       "method": "synonym"
     },
     {
@@ -152,6 +156,7 @@
       "confidence": 1.0,
       "field": "status",
       "header": "Status",
+      "key": "Status",
       "method": "synonym"
     },
     {
@@ -159,6 +164,7 @@
       "confidence": 1.0,
       "field": "market_rent",
       "header": "Market Rent",
+      "key": "Market Rent",
       "method": "synonym"
     },
     {
@@ -166,6 +172,7 @@
       "confidence": 1.0,
       "field": "charge_code",
       "header": "Charge Code",
+      "key": "Charge Code",
       "method": "synonym"
     },
     {
@@ -173,6 +180,7 @@
       "confidence": 1.0,
       "field": "charge_amount",
       "header": "Amount",
+      "key": "Amount",
       "method": "synonym"
     },
     {
@@ -180,6 +188,7 @@
       "confidence": 1.0,
       "field": "lease_start",
       "header": "Lease From",
+      "key": "Lease From",
       "method": "synonym"
     },
     {
@@ -187,6 +196,7 @@
       "confidence": 1.0,
       "field": "lease_end",
       "header": "Lease To",
+      "key": "Lease To",
       "method": "synonym"
     }
   ],

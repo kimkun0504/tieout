@@ -15,7 +15,7 @@ from openpyxl.utils import get_column_letter
 
 from tieout import __version__
 from tieout.models import Severity, jsonable
-from tieout.pipeline import CleanResult
+from tieout.pipeline import CleanResult, override_keys
 from tieout.schema import FIELDS_BY_NAME, OUTPUT_FIELDS, FieldType
 from tieout.validate import row_amount
 
@@ -53,6 +53,7 @@ def write_csv(result: CleanResult, path: Path) -> None:
 
 def to_payload(result: CleanResult) -> dict[str, Any]:
     """Everything about a run as JSON-safe data: the contract shared by the JSON export and the API."""
+    keys = override_keys(result.mappings)
     return {
         "tieout_version": __version__,
         "source": {
@@ -75,6 +76,7 @@ def to_payload(result: CleanResult) -> dict[str, Any]:
                 "field": m.field,
                 "confidence": m.confidence,
                 "method": m.method,
+                "key": keys[m.column],
             }
             for m in result.mappings
         ],
@@ -238,8 +240,6 @@ def write_xlsx(result: CleanResult, path: Path) -> None:
             v = row.get(c)
             if isinstance(v, Decimal):
                 v = float(v)  # Excel stores numbers as doubles; the format keeps two decimals
-            elif isinstance(v, str):
-                v = _safe(v)
             values.append(v)
         ws.append([*values, row.section, row.source_row])
         r = ws.max_row
@@ -271,8 +271,8 @@ def write_xlsx(result: CleanResult, path: Path) -> None:
                 i.row,
                 i.field,
                 " ".join(r.cell for r in i.refs),
-                _safe(i.message),
-                _safe(i.acknowledgment.note) if i.acknowledgment else None,
+                i.message,
+                i.acknowledgment.note if i.acknowledgment else None,
             ]
         )
 
@@ -284,8 +284,9 @@ def write_xlsx(result: CleanResult, path: Path) -> None:
         if isinstance(v, (dict, list)):
             continue
         summary.append([k, v])
-    summary.append(["source_file", _safe(result.source_file)])
+    summary.append(["source_file", result.source_file])
     summary.append(["generated_by", f"tieout {__version__}"])
+    _text_never_formula(wb)
     wb.save(path)
 
 
@@ -388,3 +389,13 @@ def write_jsonl(result: CleanResult, path: Path, redact_tenants: bool = False) -
     with path.open("w") as f:
         for rec in to_jsonl_records(result, redact_tenants):
             f.write(json.dumps(rec, default=str) + "\n")
+
+
+def _text_never_formula(wb: Workbook) -> None:
+    """openpyxl stores any string starting with "=" as a formula. Every value here is
+    data, so force those cells back to text: exact, and never executed."""
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for cell in row:
+                if cell.data_type == "f":
+                    cell.data_type = "s"

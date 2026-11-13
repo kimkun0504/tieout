@@ -56,3 +56,49 @@ def test_jsonl_can_remove_tenant_names(stacked_xlsx):
 
     for rec in to_jsonl_records(clean_file(stacked_xlsx), redact_tenants=True):
         assert "Garcia" not in rec["text"] and "tenant" not in rec["fields"]
+
+
+def test_xlsx_keeps_formula_like_text_as_exact_text(tmp_path):
+    from openpyxl import load_workbook
+
+    src = tmp_path / "inj.csv"
+    src.write_text('Unit,Tenant,Rent\n101,"=HYPERLINK(""http://x"",""a"")",1000\n', newline="")
+    paths = write_all(clean_file(src), tmp_path / "out")
+    cell = load_workbook(paths["xlsx"])["Rent Roll"]["D2"]
+    assert cell.data_type == "s"
+    assert cell.value == '=HYPERLINK("http://x","a")'  # exactly as in the source, but text
+
+
+def test_duplicate_headers_can_be_overridden_separately(tmp_path):
+    from tieout.review import Review
+
+    src = tmp_path / "dup.csv"
+    src.write_text("Unit,Tenant,Rent,Rent\n101,A,1000,1100\n", newline="")
+    first = clean_file(src)
+    assert [m.field for m in first.mappings] == ["unit", "tenant", "current_rent", None]
+    review = Review()
+    review.override_mapping("Rent", None)
+    review.override_mapping("Rent #2", "current_rent")
+    r = clean_file(src, review=review)
+    assert [m.field for m in r.mappings] == ["unit", "tenant", None, "current_rent"]
+    assert str(r.rows[0].get("current_rent")) == "1100.00"
+    from tieout.export import to_payload
+
+    assert [m["key"] for m in to_payload(r)["mappings"]] == ["Unit", "Tenant", "Rent", "Rent #2"]
+
+
+def test_two_overrides_for_one_field_keep_the_leftmost(tmp_path):
+    from tieout.review import Review
+
+    src = tmp_path / "two.csv"
+    src.write_text("Unit,Tenant,A,B\n101,Lee,1000,1100\n", newline="")
+    review = Review()
+    review.override_mapping("B", "current_rent")
+    review.override_mapping("A", "current_rent")
+    r = clean_file(src, review=review)
+    assert {m.header: m.field for m in r.mappings} == {
+        "Unit": "unit",
+        "Tenant": "tenant",
+        "A": "current_rent",
+        "B": None,
+    }

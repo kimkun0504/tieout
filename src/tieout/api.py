@@ -51,7 +51,7 @@ MAX_SOURCE_ROWS = 5000
 
 
 class MappingIn(BaseModel):
-    header: str
+    header: str  # override key: header text, or "Rent #2" for a repeated header
     field: str | None
 
 
@@ -168,6 +168,7 @@ def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
             store.delete(meta.id)  # nothing usable was found: don't keep a broken job
             raise HTTPException(422, f"Could not read this file: {e}") from e
         except Exception as e:  # corrupt workbook, zip errors, etc.
+            log.exception("Unreadable upload %s (%s)", meta.filename, meta.id)
             store.delete(meta.id)
             raise HTTPException(422, f"Could not read this file ({type(e).__name__}).") from e
 

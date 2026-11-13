@@ -70,6 +70,7 @@ export interface Mapping {
   field: string | null;
   confidence: number;
   method: "template" | "synonym" | "mapper" | "override" | "unmapped";
+  key: string; // override key: header text, or "Rent #2" for a repeated header
 }
 
 export interface ReportedTotal {

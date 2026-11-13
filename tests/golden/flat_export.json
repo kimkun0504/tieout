@@ -198,6 +198,7 @@
       "confidence": 1.0,
       "field": "unit",
       "header": "Unit",
+      "key": "Unit",
       "method": "synonym"
     },
     {
@@ -205,6 +206,7 @@
       "confidence": 1.0,
       "field": "tenant",
       "header": "Tenant",
+      "key": "Tenant",
       "method": "synonym"
     },
     {
@@ -212,6 +214,7 @@
       "confidence": 1.0,
       "field": "status",
       "header": "Status",
+      "key": "Status",
       "method": "synonym"
     },
     {
@@ -219,6 +222,7 @@
       "confidence": 1.0,
       "field": "sqft",
       "header": "Sq Ft",
+      "key": "Sq Ft",
       "method": "synonym"
     },
     {
@@ -226,6 +230,7 @@
       "confidence": 1.0,
       "field": "market_rent",
       "header": "Market Rent",
+      "key": "Market Rent",
       "method": "synonym"
     },
     {
@@ -233,6 +238,7 @@
       "confidence": 1.0,
       "field": "current_rent",
       "header": "Rent",
+      "key": "Rent",
       "method": "synonym"
     },
     {
@@ -240,6 +246,7 @@
       "confidence": 1.0,
       "field": "deposit",
       "header": "Deposit",
+      "key": "Deposit",
       "method": "synonym"
     },
     {
@@ -247,6 +254,7 @@
       "confidence": 1.0,
       "field": "move_in",
       "header": "Move-in",
+      "key": "Move-in",
       "method": "synonym"
     },
     {
@@ -254,6 +262,7 @@
       "confidence": 1.0,
       "field": "lease_start",
       "header": "Lease From",
+      "key": "Lease From",
       "method": "synonym"
     },
     {
@@ -261,6 +270,7 @@
       "confidence": 1.0,
       "field": "lease_end",
       "header": "Lease To",
+      "key": "Lease To",
       "method": "synonym"
     },
     {
@@ -268,6 +278,7 @@
       "confidence": 0.0,
       "field": null,
       "header": "Past Due",
+      "key": "Past Due",
       "method": "unmapped"
     }
   ],
