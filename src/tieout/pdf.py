@@ -82,6 +82,23 @@ def _column(p: Phrase, bounds: list[float]) -> int:
     return len(bounds) - 2
 
 
+WRAP_GAP_RATIO = 0.85  # a line this much closer than the usual row pitch is a wrapped cell
+
+
+def _is_wrapped(
+    row: list[Any], rows: list[list[Any]], i: int, header_at: int | None, tops: list[float], pitch: float
+) -> bool:
+    """A continuation line: first column empty, sitting tighter under the previous data row than rows do."""
+    if i == 0 or not rows or row[0] is not None or pitch <= 0:
+        return False
+    if header_at is not None and i <= header_at + 1:
+        return False  # never merge into the header
+    prev = rows[-1]
+    if len(prev) < 2 or prev[0] is None:
+        return False  # only merge into a real data row
+    return tops[i] - tops[i - 1] < pitch * WRAP_GAP_RATIO
+
+
 def read_pdf_rows(path: Path) -> tuple[list[list[Any]], list[str]]:
     """Return (rows, page label per row)."""
     try:
@@ -101,7 +118,11 @@ def read_pdf_rows(path: Path) -> tuple[list[list[Any]], list[str]]:
             if not words:
                 continue
             any_text = True
-            lines = [_phrases(line) for line in _lines(words)]
+            raw_lines = _lines(words)
+            lines = [_phrases(line) for line in raw_lines]
+            tops = [float(line[0]["top"]) for line in raw_lines]
+            gaps = sorted(b - a for a, b in pairwise(tops))
+            row_pitch = gaps[len(gaps) // 2] if gaps else 0.0
             scores = [_header_score(p) for p in lines]
             best = max(range(len(lines)), key=lambda i: scores[i])
             header_at = best if scores[best] >= 3 else None
@@ -116,6 +137,13 @@ def read_pdf_rows(path: Path) -> tuple[list[list[Any]], list[str]]:
                     for p in phrases:
                         c = _column(p, bounds)
                         row[c] = p.text if row[c] is None else f"{row[c]} {p.text}"
+                    if _is_wrapped(row, rows, i, header_at, tops, row_pitch):
+                        # Text that wrapped inside its cell: append it to the row above.
+                        prev = rows[-1]
+                        for c, text in enumerate(row):
+                            if text is not None:
+                                prev[c] = text if prev[c] is None else f"{prev[c]} {text}"
+                        continue
                     rows.append(row)
                 pages.append(f"page {page_no}")
     if not any_text:

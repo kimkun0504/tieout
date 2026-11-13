@@ -37,3 +37,32 @@ def test_pdf_without_text_is_refused_with_advice(tmp_path):
     c.save()
     with pytest.raises(UnsupportedFormat, match="no text layer"):
         read_grid(path)
+
+
+def test_wrapped_cell_text_joins_its_row(tmp_path):
+    """Found in review: a tenant name wrapping onto a second line became a section label."""
+    from reportlab.pdfgen import canvas
+
+    path = tmp_path / "wrap.pdf"
+    c = canvas.Canvas(str(path))
+    c.setFont("Helvetica", 9)
+    cols = [40, 100, 260, 340]
+    for y, vals in [
+        (760, ["Unit", "Resident", "Market Rent", "Rent"]),
+        (745, ["101", "Abernathy-Whitfield,", "1,500.00", "1,450.00"]),
+        (734, [None, "Christopher J.", None, None]),  # wrapped: 11pt below, rows are 15pt apart
+        (719, ["102", "Lee, Jo", "1,500.00", "1,500.00"]),
+        (704, ["103", "Diaz, Ana", "1,500.00", "1,500.00"]),
+        (689, ["Total", None, "4,500.00", "4,450.00"]),
+    ]:
+        for x, v in zip(cols, vals, strict=True):
+            if v:
+                c.drawString(x, y, v)
+    c.save()
+    r = clean_file(path)
+    assert [(x.get("unit"), x.get("tenant"), x.section) for x in r.rows] == [
+        ("101", "Abernathy-Whitfield, Christopher J.", None),
+        ("102", "Lee, Jo", None),
+        ("103", "Diaz, Ana", None),
+    ]
+    assert r.ok
