@@ -86,3 +86,15 @@ def test_future_lease_reads_naturally_for_ai_records():
 def test_derived_status_explains_itself():
     row = _run(CURRENT, FUTURE).rows[-1]
     assert row.values["status"].to_dict()["note"].startswith('Listed under "Future Residents/Applicants"')
+
+
+@pytest.mark.parametrize("heading", ["Pending Move-Outs", "Notice / Pending", "Current and Pending Residents"])
+def test_headings_about_current_units_are_not_future(heading):
+    rows = [[heading], ["201", "1x1", 700, "Ray", "Notice", 1500, 1500, "11/30/2026"]]
+    r = _run(rows)
+    assert r.rows[0].get("status") == "notice" and r.summary()["units"] == 1
+
+
+def test_future_heading_wins_even_when_it_mentions_vacant_units():
+    r = _run(CURRENT, [["Future Residents (pre-leased vacant units)"], *FUTURE[1:]])
+    assert r.summary()["future_leases"] == 2

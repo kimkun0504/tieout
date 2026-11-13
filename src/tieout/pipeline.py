@@ -467,12 +467,20 @@ def _apply_corrections(row: CleanRow, review: Review) -> None:
         )
 
 
-_FUTURE_SECTION = re.compile(r"\b(future|applicants?|pending|pre-?leased?|upcoming|approved)\b", re.I)
+# "Future" and "Applicants" always mean leases not yet started; "Pending" or "Approved" do only
+# when the heading isn't about units that exist today ("Pending Move-Outs").
+_FUTURE_SECTION = re.compile(r"\b(future|applicants?|pre-?leased?)\b", re.I)
+_MAYBE_FUTURE_SECTION = re.compile(r"\b(pending|upcoming|approved)\b", re.I)
+_CURRENT_SECTION = re.compile(r"move.?outs?|notice|ntv|vacan|current|occupied", re.I)
 
 
 def _mark_future_section(row: CleanRow) -> None:
     """Rows under a "Future Residents/Applicants" heading are future leases, whatever their status cell says."""
-    if not (row.section and _FUTURE_SECTION.search(row.section)) or row.get("status") == "future":
+    section = row.section or ""
+    future = bool(_FUTURE_SECTION.search(section)) or (
+        bool(_MAYBE_FUTURE_SECTION.search(section)) and not _CURRENT_SECTION.search(section)
+    )
+    if not future or row.get("status") == "future":
         return
     status = row.values.get("status")
     if status is not None and status.correction is not None:
