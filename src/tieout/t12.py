@@ -216,7 +216,14 @@ def read_t12(grid: Grid) -> Statement:
             line_section = "noi"
         elif _TOTAL_RE.match(label):
             kind = "subtotal"
-            line_section = "expense" if _EXPENSE_RE.search(label) else "income" if _INCOME_RE.search(label) else section
+            if seen_noi:
+                line_section = "below_noi"  # capital expenditures, debt service: never operating totals
+            elif _EXPENSE_RE.search(label):
+                line_section = "expense"
+            elif _INCOME_RE.search(label):
+                line_section = "income"
+            else:
+                line_section = section
         else:
             kind = "line"
             line_section = "below_noi" if seen_noi else section
@@ -237,6 +244,18 @@ def _read_amount(grid: Grid, r: int, c: int) -> TracedValue:
     if grid.is_uncomputed(r, c):
         issue = "cell is a formula with no saved result; open the file in Excel and save it again"
     return TracedValue(value, raw, grid.ref(r, c), issue=issue)
+
+
+def _month_total(lines: list[Line], i: int) -> Decimal:
+    return sum((x.amounts[i].value or Decimal(0) for x in lines), Decimal(0))
+
+
+def _ties(subtotal: Line, lines: list[Line], n: int) -> bool:
+    """Every month the subtotal reports equals the sum of these lines."""
+    return all(
+        subtotal.amounts[i].value is None or abs(subtotal.amounts[i].value - _month_total(lines, i)) <= TOLERANCE
+        for i in range(n)
+    )
 
 
 def _refs(tv: TracedValue) -> list[SourceRef]:
@@ -296,37 +315,51 @@ def _validate(stmt: Statement) -> list[Issue]:
                 )
             )
 
-    # Down: each subtotal equals the lines since the previous subtotal in its section.
+    # Down: a subtotal must equal either the lines since the previous subtotal (a partial
+    # total such as "Total Rental Income") or every line of its section so far (the section
+    # total, such as "Total Income" after several partial totals).
     pending: list[Line] = []
+    open_lines: dict[str, list[Line]] = {}
     section_totals: dict[str, Line] = {}
+    last_subtotal: dict[str, Line] = {}
     for ln in stmt.lines:
         if ln.kind == "line":
             pending.append(ln)
+            open_lines.setdefault(ln.section, []).append(ln)
             continue
-        if ln.kind == "subtotal":
-            covered = [x for x in pending if x.section == ln.section] or pending
+        if ln.kind != "subtotal":
+            continue
+        last_subtotal[ln.section] = ln  # the broadest total a section reports comes last
+        partial = [x for x in pending if x.section == ln.section] or pending
+        whole = open_lines.get(ln.section, [])
+        if whole and _ties(ln, whole, n):
+            # Covers everything in its section so far: the latest such subtotal is the section total.
+            section_totals[ln.section] = ln
+        elif not (partial and _ties(ln, partial, n)):
+            group = partial or whole
             for i in range(n):
                 reported = ln.amounts[i].value
                 if reported is None:
                     continue
-                computed = sum((x.amounts[i].value or Decimal(0) for x in covered), Decimal(0))
+                computed = _month_total(group, i)
                 if abs(reported - computed) > TOLERANCE:
                     issues.append(
                         Issue(
                             Severity.ERROR,
                             "t12_subtotal_mismatch",
                             f"'{ln.name}' for {stmt.months[i]:%b %Y} is {_m(reported)}, but its "
-                            f"{len(covered)} lines add up to {_m(computed)} "
+                            f"{len(group)} lines add up to {_m(computed)} "
                             f"(difference {_m(reported - computed)}).",
                             ln.source_row,
                             None,
                             _refs(ln.amounts[i]),
                         )
                     )
-            section_totals.setdefault(ln.section, ln)
-            pending = []
+        pending = []
 
-    # Through: NOI = income - expenses, month by month.
+    # Through: NOI = income - expenses, month by month. It ties if it matches the line
+    # items or the reported section totals, so one wrong line or one wrong subtotal is
+    # reported once, by its own check, rather than also breaking NOI.
     for noi in (x for x in stmt.lines if x.kind == "noi"):
         for i in range(n):
             reported = noi.amounts[i].value
@@ -334,6 +367,13 @@ def _validate(stmt: Statement) -> list[Issue]:
                 continue
             inc = _section_month(stmt, section_totals, "income", i)
             exp = _section_month(stmt, section_totals, "expense", i)
+            by_totals = _reported_month(last_subtotal, "income", i), _reported_month(last_subtotal, "expense", i)
+            if (
+                by_totals[0] is not None
+                and by_totals[1] is not None
+                and abs(reported - (by_totals[0] - by_totals[1])) <= TOLERANCE
+            ):
+                continue
             if abs(reported - (inc - exp)) > TOLERANCE:
                 issues.append(
                     Issue(
@@ -351,12 +391,25 @@ def _validate(stmt: Statement) -> list[Issue]:
     return issues
 
 
+def _reported_month(totals: dict[str, Line], section: str, i: int) -> Decimal | None:
+    sub = totals.get(section)
+    return Decimal(sub.amounts[i].value) if sub is not None and sub.amounts[i].value is not None else None
+
+
 def _section_month(stmt: Statement, totals: dict[str, Line], section: str, i: int) -> Decimal:
-    """A section's amount for month i: its reported subtotal if there is one, else the sum of its lines."""
+    """A section's amount for month i, from its line items.
+
+    Lines, not reported subtotals, so a wrong subtotal is reported once (by the
+    subtotal check) instead of also breaking NOI. A statement with no line detail
+    falls back to its section total.
+    """
+    items = stmt.items(section)
+    if items:
+        return _month_total(items, i)
     sub = totals.get(section)
     if sub is not None and sub.amounts[i].value is not None:
         return Decimal(sub.amounts[i].value)
-    return sum((ln.amounts[i].value or Decimal(0) for ln in stmt.items(section)), Decimal(0))
+    return Decimal(0)
 
 
 def to_payload(stmt: Statement) -> dict[str, Any]:

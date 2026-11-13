@@ -40,7 +40,7 @@ def test_row_total_and_subtotal_errors(tmp_path):
     wb.save(path)
     s = stmt(path)
     rules = sorted({i.rule for i in s.issues if i.severity.value == "error"})
-    assert rules == ["t12_row_total_mismatch", "t12_subtotal_mismatch"]
+    assert rules == ["t12_row_total_mismatch", "t12_subtotal_mismatch"]  # no cascade into NOI
     sub = next(i for i in s.issues if i.rule == "t12_subtotal_mismatch")
     assert "Jan 2026" in sub.message and "difference 40.00" in sub.message
 
@@ -129,3 +129,46 @@ def test_cli_detects_a_t12(tmp_path, capsys):
     out = capsys.readouterr().out
     assert code == 1 and "tieout T-12 report" in out and "t12_noi_mismatch" in out
     assert (tmp_path / "out" / "t12.t12.tidy.csv").exists()
+
+
+def _nested(tmp_path, total_income_feb="95"):
+    m = ["Jan-26", "Feb-26", "Mar-26"]
+    rows = [
+        ",".join(["Account", *m, "Total"]),
+        "INCOME",
+        "Rental Income",
+        "Gross Potential Rent,100,100,100,300",
+        "Vacancy,-10,-10,-10,-30",
+        "Total Rental Income,90,90,90,270",
+        "Other Income",
+        "Parking,5,5,5,15",
+        "Total Other Income,5,5,5,15",
+        f"Total Income,95,{total_income_feb},95,{190 + int(total_income_feb)}",
+        "EXPENSES",
+        "Payroll,20,20,20,60",
+        "Taxes,10,10,10,30",
+        "Total Expenses,30,30,30,90",
+        "Net Operating Income,65,65,65,195",
+        "CAPITAL EXPENDITURES",
+        "Roof,50,0,0,50",
+        "Total Capital Expenditures,50,0,0,50",
+        "Net Cash Flow,15,65,65,145",
+    ]
+    path = tmp_path / "nested.csv"
+    path.write_text("\n".join(rows) + "\n")
+    return read_t12(read_grid(path))
+
+
+def test_nested_subtotals_and_capex_below_noi(tmp_path):
+    """Found in review: partial totals followed by a section total produced false errors."""
+    s = _nested(tmp_path)
+    assert s.ok, [i.message for i in s.issues]
+    assert {ln.name: ln.section for ln in s.lines if ln.kind == "subtotal"}["Total Capital Expenditures"] == "below_noi"
+    assert s.summary()["noi"] == "195.00"  # capex is below NOI
+
+
+def test_one_wrong_subtotal_is_one_error(tmp_path):
+    s = _nested(tmp_path, total_income_feb="98")
+    errors = [i for i in s.issues if i.severity.value == "error"]
+    assert [i.rule for i in errors] == ["t12_subtotal_mismatch"]
+    assert "Feb 2026" in errors[0].message
