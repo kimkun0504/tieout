@@ -37,6 +37,18 @@ def main(argv: list[str] | None = None) -> int:
 
     args = p.parse_args(argv)
     if args.command == "clean":
+        from tieout.ingest import read_grid
+        from tieout.t12 import is_t12, read_t12
+        from tieout.t12 import render_report as render_t12
+        from tieout.t12 import write_outputs as write_t12
+
+        grid = read_grid(args.file, args.sheet)
+        if is_t12(grid):
+            stmt = read_t12(grid)
+            paths = write_t12(stmt, args.out)
+            print(render_t12(stmt))
+            print("Wrote:", ", ".join(str(v) for v in paths.values()))
+            return 1 if args.strict and not stmt.ok else 0
         store = TemplateStore(args.templates) if args.templates else None
         review = Review.load(args.review) if args.review else None
         mapper = None
@@ -45,7 +57,7 @@ def main(argv: list[str] | None = None) -> int:
 
             mapper = AnthropicHeaderMapper()
         result = clean_file(
-            args.file, sheet=args.sheet, templates=store, mapper=mapper, as_of=args.as_of, review=review
+            args.file, sheet=args.sheet, templates=store, mapper=mapper, as_of=args.as_of, review=review, grid=grid
         )
         paths = write_all(result, args.out)
         if args.save_template:

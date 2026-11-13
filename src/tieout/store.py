@@ -52,6 +52,7 @@ class JobMeta:
     last_summary: dict[str, Any] = field(default_factory=dict)
     last_ok: bool | None = None
     updated_at: str = ""
+    document_type: str = "rent_roll"  # or "t12"
 
 
 def _write_json(path: Path, data: Any) -> None:
@@ -190,3 +191,34 @@ class JobStore:
             meta.last_summary, meta.last_ok = summary, result.ok
             self.save_meta(meta)
         return result
+
+    def payload(self, job_id: str) -> dict[str, Any]:
+        """The result for any document type, as the API returns it."""
+        from tieout import __version__
+        from tieout.export import to_payload
+        from tieout.t12 import is_t12, read_t12
+        from tieout.t12 import to_payload as t12_payload
+
+        grid = self.grid(job_id)
+        if is_t12(grid):
+            stmt = read_t12(grid)
+            meta = self.meta(job_id)
+            s = stmt.summary()
+            summary = {
+                k: s[k]
+                for k in (
+                    "period",
+                    "months",
+                    "line_items",
+                    "total_income",
+                    "total_expenses",
+                    "noi",
+                    "errors",
+                    "warnings",
+                )
+            }
+            if meta.document_type != "t12" or meta.last_summary != summary or meta.last_ok != stmt.ok:
+                meta.document_type, meta.last_summary, meta.last_ok = "t12", summary, stmt.ok
+                self.save_meta(meta)
+            return {**t12_payload(stmt), "tieout_version": __version__}
+        return to_payload(self.run(job_id))

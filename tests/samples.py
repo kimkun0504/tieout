@@ -237,3 +237,68 @@ def make_pdf_rent_roll(path: Path, ruled: bool = True) -> Path:
     ]
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
     return path
+
+
+def make_t12_xlsx(path: Path, noi_off_by: int = 0) -> Path:
+    """A trailing-12 operating statement: title rows, GL codes, month columns
+    as real dates, Income and Expense sections with subtotals, NOI.
+    `noi_off_by` plants an error in the December NOI."""
+    from datetime import date as _date
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "T12"
+    months = [_date(2025, m, 1) if m >= 11 else _date(2026, m - 0, 1) for m in (11, 12)] + [
+        _date(2026, m, 1) for m in range(1, 11)
+    ]
+    ws.append(["Maple Court Apartments"])
+    ws.append(["12 Month Statement - Nov 2025 through Oct 2026"])
+    ws.append([])
+    ws.append(["Account", "Description", *months, "Total"])
+    lines = {
+        "income": [
+            ("4000", "Gross Potential Rent", 52000),
+            ("4100", "Loss to Lease", -1500),
+            ("4200", "Vacancy Loss", -2600),
+            ("4300", "Concessions", -400),
+            ("4500", "Parking Income", 900),
+            ("4600", "Pet Fees", 350),
+            ("4800", "Late Fees", 220),
+        ],
+        "expense": [
+            ("6000", "Payroll & Benefits", 6200),
+            ("6100", "Repairs & Maintenance", 2100),
+            ("6200", "Contract Services - Landscaping", 800),
+            ("6300", "Utilities - Electric", 1400),
+            ("6310", "Water & Sewer", 1150),
+            ("6400", "Management Fees", 1450),
+            ("6500", "Real Estate Taxes", 5200),
+            ("6600", "Property Insurance", 1900),
+            ("6700", "Marketing & Advertising", 300),
+            ("6800", "General & Administrative", 450),
+        ],
+    }
+
+    def amounts(base: int, code: str) -> list[int]:
+        # deterministic month-to-month variation
+        return [base + ((int(code) // 10 + i * 37) % 9 - 4) * (abs(base) // 100) for i in range(12)]
+
+    totals: dict[str, list[int]] = {}
+    for section, title, total_label in (
+        ("income", "INCOME", "Total Income"),
+        ("expense", "OPERATING EXPENSES", "Total Operating Expenses"),
+    ):
+        ws.append([None, title])
+        sums = [0] * 12
+        for code, name, base in lines[section]:
+            a = amounts(base, code)
+            sums = [x + y for x, y in zip(sums, a, strict=True)]
+            ws.append([code, name, *a, sum(a)])
+        ws.append([None, total_label, *sums, sum(sums)])
+        totals[section] = sums
+        ws.append([])
+    noi = [i - e for i, e in zip(totals["income"], totals["expense"], strict=True)]
+    noi[1] += noi_off_by
+    ws.append([None, "Net Operating Income", *noi, sum(noi)])
+    wb.save(path)
+    return path

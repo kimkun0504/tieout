@@ -27,7 +27,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from tieout import __version__
-from tieout.export import render_report, to_payload, write_csv, write_issues, write_json, write_jsonl, write_xlsx
+from tieout.export import render_report, write_csv, write_issues, write_json, write_jsonl, write_xlsx
 from tieout.ingest import UnsupportedFormat
 from tieout.schema import RENT_ROLL_FIELDS
 from tieout.store import MAX_UPLOAD_BYTES, JobMeta, JobNotFound, JobStore
@@ -107,10 +107,12 @@ def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
         return JSONResponse({"detail": "Job not found"}, status_code=404)
 
     def result_response(job_id: str) -> dict[str, Any]:
-        result = store.run(job_id)
-        return {"job": _job_view(store.meta(job_id)), "result": to_payload(result)}
+        payload = store.payload(job_id)
+        return {"job": _job_view(store.meta(job_id)), "result": payload}
 
     def mutate(job_id: str, author: str, fn: Any) -> dict[str, Any]:
+        if store.meta(job_id).document_type == "t12":
+            raise HTTPException(409, "Corrections and mappings are available for rent rolls only, not T-12 statements.")
         with store.lock(job_id):
             review = store.review(job_id)
             try:
@@ -244,6 +246,8 @@ def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
 
     @app.post("/api/jobs/{job_id}/template", status_code=201)
     def save_template(job_id: str, body: TemplateIn) -> dict[str, str]:
+        if store.meta(job_id).document_type == "t12":
+            raise HTTPException(409, "Templates are for rent roll column mappings.")
         result = store.run(job_id)
         path = store.templates.save(result.header.headers, result.mappings, body.name)
         return {"template": path.stem, "name": body.name}
@@ -267,6 +271,10 @@ def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
     ) -> StreamingResponse:
         import tempfile
 
+        meta = store.meta(job_id)
+        stem = re.sub(r"[^\w.-]", "_", Path(meta.filename).stem) or "statement"
+        if meta.document_type == "t12":
+            return _export_t12(store, job_id, fmt, stem)
         result = store.run(job_id)
         mime, suffix = media[fmt]
         stem = re.sub(r"[^\w.-]", "_", Path(store.meta(job_id).filename).stem) or "rent_roll"
@@ -297,6 +305,30 @@ def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
             return FileResponse(WEB_DIST / "index.html")
 
     return app
+
+
+def _export_t12(store: JobStore, job_id: str, fmt: str, stem: str) -> StreamingResponse:
+    import tempfile
+
+    from tieout.t12 import read_t12, write_outputs
+
+    files = {"json": "json", "csv": "csv", "xlsx": "xlsx", "report": "report"}
+    if fmt not in files:
+        raise HTTPException(422, f"T-12 statements export as {', '.join(files)}.")
+    stmt = read_t12(store.grid(job_id))
+    with tempfile.TemporaryDirectory() as tmp:
+        path = write_outputs(stmt, tmp)[files[fmt]]
+        data = path.read_bytes()
+        suffix = path.name[len(Path(stmt.file).stem) :]
+    mime = {
+        "json": "application/json",
+        "csv": "text/csv",
+        "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "report": "text/markdown",
+    }[fmt]
+    return StreamingResponse(
+        io.BytesIO(data), media_type=mime, headers={"Content-Disposition": f'attachment; filename="{stem}{suffix}"'}
+    )
 
 
 def _cell_text(v: Any) -> str | None:

@@ -1,4 +1,5 @@
 {
+  "document_type": "rent_roll",
   "fields": [
     {
       "description": "Unit or suite identifier",

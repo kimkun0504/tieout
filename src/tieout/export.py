@@ -55,6 +55,7 @@ def to_payload(result: CleanResult) -> dict[str, Any]:
     """Everything about a run as JSON-safe data: the contract shared by the JSON export and the API."""
     keys = override_keys(result.mappings)
     return {
+        "document_type": "rent_roll",
         "tieout_version": __version__,
         "source": {
             "file": result.source_file,

@@ -193,3 +193,32 @@ def test_security_headers_and_request_id(client):
     assert "frame-ancestors 'none'" in r.headers["Content-Security-Policy"]
     assert r.headers["X-Request-ID"] == "abc123"
     assert len(client.get("/api/health").headers["X-Request-ID"]) == 12
+
+
+def test_t12_upload_is_detected_and_checked(client, tmp_path):
+    from samples import make_t12_xlsx
+
+    body = upload(client, make_t12_xlsx(tmp_path / "maple_t12.xlsx", noi_off_by=250)).json()
+    assert body["result"]["document_type"] == "t12"
+    assert body["result"]["ok"] is False
+    assert [i["rule"] for i in body["result"]["issues"] if i["severity"] == "error"] == ["t12_noi_mismatch"]
+    job = body["job"]
+    assert job["document_type"] == "t12" and job["last_summary"]["period"] == "Nov 2025 to Oct 2026"
+
+    jid = job["id"]
+    r = client.post(
+        f"/api/jobs/{jid}/corrections", json={"source_row": 6, "field": "current_rent", "value": "1", "reason": "x"}
+    )
+    assert r.status_code == 409
+    for fmt in ("json", "csv", "xlsx", "report"):
+        r = client.get(f"/api/jobs/{jid}/export/{fmt}")
+        assert r.status_code == 200, fmt
+        assert "maple_t12" in r.headers["content-disposition"]
+    assert client.get(f"/api/jobs/{jid}/export/jsonl").status_code == 422
+    tidy = client.get(f"/api/jobs/{jid}/export/csv").text.splitlines()
+    assert tidy[0] == "month,section,category,code,line_item,amount,source_cell,source_row"
+    assert len(tidy) == 1 + 17 * 12
+
+
+def test_rent_roll_payload_names_its_type(client, flat_csv):
+    assert upload(client, flat_csv).json()["result"]["document_type"] == "rent_roll"
