@@ -41,6 +41,11 @@ def check_mapping(mappings: list[ColumnMapping]) -> list[Issue]:
     for spec in FIELDS_BY_NAME.values():
         if spec.required and spec.name not in mapped:
             issues.append(Issue(Severity.ERROR, "required_column_missing", f"No column found for required field '{spec.name}'."))
+    if "status" not in mapped:
+        source = "tenant names" if "tenant" in mapped else "rent amounts" if "current_rent" in mapped else None
+        msg = (f"No status column: occupancy is inferred from {source}; please confirm."
+               if source else "No status, tenant or rent column: occupancy cannot be determined.")
+        issues.append(Issue(Severity.INFO if source else Severity.WARNING, "status_inferred", msg, field="status"))
     for m in mappings:
         if m.field and m.confidence < 0.9:
             issues.append(

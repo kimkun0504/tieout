@@ -229,3 +229,14 @@ def test_second_total_line_reuses_the_same_rows(tmp_path):
     r = clean_file(path)
     assert [len(t.scope_rows) for t in r.totals] == [2, 2]
     assert r.ok
+
+
+def test_no_status_or_tenant_column_infers_from_rent(tmp_path):
+    """Finding 6: every unit used to be marked vacant (0% occupancy) when both columns were missing."""
+    path = _xlsx(tmp_path, [["Unit", "Rent", "Market Rent"], ["101", 1000, 1000], ["102", 0, 1100], ["103", 1200, 1200]])
+    r = clean_file(path)
+    assert [x.get("status") for x in r.rows] == ["occupied", "vacant", "occupied"]
+    assert all(x.values["status"].derived for x in r.rows)
+    assert r.summary()["physical_occupancy"] == round(2 / 3, 4)
+    assert "vacant_with_rent" not in rules(r)
+    assert "status_inferred" in rules(r, Severity.INFO)

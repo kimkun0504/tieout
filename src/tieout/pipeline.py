@@ -140,10 +140,20 @@ def _build_row(grid: Grid, r: int, section: str | None, col_for: dict[str, int])
 
     status = row.values.get("status")
     if status is None or (status.value is None and not status.issue):
-        has_tenant = bool(row.get("tenant"))
-        src = row.values["tenant"].source if "tenant" in row.values else None
-        row.values["status"] = TracedValue("occupied" if has_tenant else "vacant", None, src, derived=True)
+        row.values["status"] = _infer_status(row, "tenant" in col_for)
     return row
+
+
+def _infer_status(row: CleanRow, has_tenant_column: bool) -> TracedValue:
+    """Status when the file doesn't state it. Never assume vacancy from a missing column."""
+    if has_tenant_column:
+        tenant = row.values["tenant"]
+        return TracedValue("occupied" if row.get("tenant") else "vacant", None, tenant.source, derived=True)
+    rent = row.values.get("current_rent")
+    if rent is not None and rent.value is not None:
+        # No tenant or status column: charged rent is the only evidence of occupancy.
+        return TracedValue("occupied" if rent.value > 0 else "vacant", None, rent.source, derived=True)
+    return TracedValue(None, None, None, derived=True)
 
 
 def _total_amounts(grid: Grid, r: int, col_for: dict[str, int]) -> dict[str, TracedValue]:
