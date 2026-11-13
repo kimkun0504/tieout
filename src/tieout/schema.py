@@ -27,6 +27,7 @@ class FieldSpec:
     required: bool = False
     description: str = ""
     output: bool = True  # False for input-only fields (charge lines are rolled up per unit)
+    additive: bool = True  # False for rates: a total row's rent per SF is an average, not a sum
 
 
 RENT_ROLL_FIELDS: tuple[FieldSpec, ...] = (
@@ -77,6 +78,8 @@ RENT_ROLL_FIELDS: tuple[FieldSpec, ...] = (
             "lease rent",
             "contract rent",
             "monthly rent",
+            "monthly base rent",
+            "base rent monthly",
             "base rent",
             "in place rent",
             "effective rent",
@@ -98,6 +101,55 @@ RENT_ROLL_FIELDS: tuple[FieldSpec, ...] = (
             "current annual rent",
         ),
         description="Rent per year (common in commercial rent rolls)",
+    ),
+    FieldSpec(
+        "rent_psf",
+        FieldType.MONEY,
+        (
+            "rent psf",
+            "rent per sf",
+            "rent sf",
+            "psf",
+            "rent per sq ft",
+            "rent per square foot",
+            "annual rent psf",
+            "annual rent sf",
+            "annual rent per sf",
+            "annual psf",
+            "base rent psf",
+            "base rent sf",
+            "base rent sf yr",
+            "rent sf yr",
+            "rent psf yr",
+            "annual base rent psf",
+            "annual base rent sf",
+            "abr psf",
+            "abr sf",
+            "rate psf",
+            "rate sf",
+        ),
+        description="Annual rent per square foot (commercial rent rolls)",
+        additive=False,
+    ),
+    FieldSpec(
+        "rent_psf_monthly",
+        FieldType.MONEY,
+        (
+            "rent psf mo",
+            "rent sf mo",
+            "rent sf month",
+            "rent psf month",
+            "monthly rent psf",
+            "monthly rent sf",
+            "monthly psf",
+            "base rent sf mo",
+            "base rent psf mo",
+            "psf mo",
+            "rent per sf per month",
+        ),
+        description="Monthly rent per square foot (converted to annual rent_psf)",
+        output=False,
+        additive=False,
     ),
     FieldSpec(
         "concessions",

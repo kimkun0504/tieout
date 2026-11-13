@@ -73,6 +73,7 @@ const LABELS: Record<string, string> = {
   market_rent: "Market rent",
   current_rent: "Rent",
   annual_rent: "Annual rent",
+  rent_psf: "Rent/SF (yr)",
   concessions: "Concessions",
   other_charges: "Other charges",
   total_charges: "Total charges",

@@ -43,6 +43,11 @@
       "type": "money"
     },
     {
+      "description": "Annual rent per square foot (commercial rent rolls)",
+      "name": "rent_psf",
+      "type": "money"
+    },
+    {
       "description": "Monthly concessions or discounts (usually negative)",
       "name": "concessions",
       "type": "money"

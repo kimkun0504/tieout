@@ -272,6 +272,24 @@ def check_cross_fields(rows: list[CleanRow]) -> list[Issue]:
                         "annual_rent",
                     )
                 )
+        psf_tv = row.values.get("rent_psf")
+        psf, sqft = row.get("rent_psf"), row.get("sqft")
+        yearly = annual if annual is not None else (rent * 12 if rent is not None else None)
+        if psf_tv is not None and psf is not None and sqft and yearly is not None and yearly > 0 and psf > 0:
+            expected = psf * Decimal(str(sqft))
+            # A rate printed to the cent can be off by half a cent per foot (x12 if it was monthly).
+            tolerance = Decimal("0.005") * Decimal(str(sqft)) * (12 if psf_tv.derived else 1) + Decimal(1)
+            if abs(expected - yearly) > tolerance:
+                issues.append(
+                    Issue(
+                        Severity.WARNING,
+                        "rent_psf_mismatch",
+                        f"Unit {unit}: {show(psf)}/SF x {sqft:,} SF is {show(expected)} a year, but its rent is "
+                        f"{show(yearly)} a year ({show(yearly / Decimal(str(sqft)))}/SF).",
+                        r,
+                        "rent_psf",
+                    )
+                )
         rent_lines = [c.amount.value for c in row.charges if c.category == "rent" and c.amount.value is not None]
         if (
             rent_lines

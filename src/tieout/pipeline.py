@@ -152,6 +152,7 @@ def clean_file(
     for row in rows:
         _roll_up_charges(row, col_for)
         _derive_monthly_from_annual(row, col_for)
+        _derive_annual_psf(row)
         _clean_tenant(row)
         _apply_corrections(row, review)
         _ensure_status(row, "tenant" in col_for)
@@ -381,6 +382,20 @@ def _derive_monthly_from_annual(row: CleanRow, col_for: dict[str, int]) -> None:
     )
 
 
+def _derive_annual_psf(row: CleanRow) -> None:
+    """Rent per SF is stated per year in the output; a monthly rate becomes x 12, marked derived."""
+    monthly = row.values.pop("rent_psf_monthly", None)
+    if monthly is None or monthly.value is None or row.get("rent_psf") is not None:
+        return
+    row.values["rent_psf"] = TracedValue(
+        monthly.value * 12,
+        monthly.raw,
+        monthly.source,
+        derived=True,
+        sources=[monthly.source] if monthly.source else [],
+    )
+
+
 def _clean_tenant(row: CleanRow) -> None:
     tenant = row.values.get("tenant")
     if not (tenant and isinstance(tenant.value, str)):
@@ -433,7 +448,8 @@ def _infer_status(row: CleanRow, has_tenant_column: bool) -> TracedValue:
 def _total_amounts(grid: Grid, r: int, col_for: dict[str, int]) -> dict[str, TracedValue]:
     out = {}
     for name, c in col_for.items():
-        if FIELDS_BY_NAME[name].type in (FieldType.MONEY, FieldType.NUMBER):
+        spec = FIELDS_BY_NAME[name]
+        if spec.type in (FieldType.MONEY, FieldType.NUMBER) and spec.additive:
             raw = grid.value(r, c)
             if grid.is_uncomputed(r, c):
                 out[name] = TracedValue(None, raw, grid.ref(r, c), issue=UNCOMPUTED_FORMULA)
