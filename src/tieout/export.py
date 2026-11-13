@@ -257,6 +257,17 @@ def write_issues(result: CleanResult, path: Path) -> None:
             )
 
 
+def _report_date_line(result: CleanResult) -> str:
+    rd = result.report_date
+    if result.as_of is None:
+        return "Report date: not stated in the file and not given; lease-expiry checks were skipped."
+    if rd and rd.value == result.as_of:
+        return f"Report date: {result.as_of:%m/%d/%Y}, read from cell {rd.ref.cell} ({_md(rd.text)})."
+    if rd:
+        return f"Report date: {result.as_of:%m/%d/%Y}, set by the reviewer (the file says {rd.value:%m/%d/%Y})."
+    return f"Report date: {result.as_of:%m/%d/%Y}, set by the reviewer."
+
+
 def render_report(result: CleanResult) -> str:
     s = result.summary()
     occ = f"{s['physical_occupancy']:.1%}" if s["physical_occupancy"] is not None else "n/a"
@@ -264,6 +275,8 @@ def render_report(result: CleanResult) -> str:
         f"# tieout report: {result.source_file}",
         "",
         f"Sheet **{result.sheet}**, header on row(s) {', '.join(str(r + 1) for r in result.header.header_rows)}.",
+        "",
+        _report_date_line(result),
         "",
         f"**{'PASS' if result.ok else 'NEEDS REVIEW'}**: {s['errors']} errors, {s['warnings']} warnings.",
         "",
