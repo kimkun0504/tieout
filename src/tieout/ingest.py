@@ -84,7 +84,7 @@ class UnsupportedFormat(ValueError):
     pass
 
 
-SUPPORTED_SUFFIXES = {".xlsx", ".xlsm", ".csv", ".tsv", ".txt", ".pdf"}
+SUPPORTED_SUFFIXES = {".xlsx", ".xlsm", ".xls", ".csv", ".tsv", ".txt", ".pdf"}
 
 
 def read_grid(path: str | Path, sheet: str | None = None, name: str | None = None) -> Grid:
@@ -94,6 +94,8 @@ def read_grid(path: str | Path, sheet: str | None = None, name: str | None = Non
     grid: Grid
     if suffix in {".xlsx", ".xlsm"}:
         grid = _read_excel(path, sheet)
+    elif suffix == ".xls":
+        grid = _read_legacy(path, sheet)
     elif suffix in {".csv", ".tsv", ".txt"}:
         grid = _read_delimited(path)
         if name:
@@ -110,9 +112,20 @@ def read_grid(path: str | Path, sheet: str | None = None, name: str | None = Non
     return grid
 
 
+def _read_legacy(path: Path, sheet: str | None) -> Grid:
+    from tieout.legacy import LegacyFormatError, read_xls, sniff
+
+    with path.open("rb") as fh:
+        if sniff(fh.read(8192)) == "xlsx":
+            return _read_excel(path, sheet)
+    try:
+        rows, merges, sheet_name, sheets = read_xls(path, sheet)
+    except LegacyFormatError as e:
+        raise UnsupportedFormat(str(e)) from e
+    return Grid(file=path.name, sheet=sheet_name, rows=_trim(rows), merges=merges, sheets=sheets)
+
+
 def _unsupported(suffix: str) -> Grid:
-    if suffix == ".xls":
-        raise UnsupportedFormat("Legacy .xls is not supported; re-save the file as .xlsx.")
     raise UnsupportedFormat(f"Unsupported file type: {suffix or '(none)'}")
 
 
@@ -138,7 +151,9 @@ def check_xlsx(path: Path) -> None:
 def _read_excel(path: Path, sheet: str | None) -> Grid:
     check_xlsx(path)
     # data_only=True returns the cached results of formulas instead of the formula text.
-    wb = load_workbook(path, data_only=True)
+    # A file object, not the path: openpyxl rejects a workbook whose name doesn't end .xlsx/.xlsm.
+    with path.open("rb") as fh:
+        wb = load_workbook(fh, data_only=True)
     if sheet is not None:
         if sheet not in wb.sheetnames:
             raise ValueError(f"Sheet {sheet!r} not found. Sheets: {', '.join(wb.sheetnames)}")
@@ -154,7 +169,8 @@ def _read_excel(path: Path, sheet: str | None) -> Grid:
     # silently skip a total's tie-out check. Find those cells so we can flag them.
     uncomputed: set[tuple[int, int]] = set()
     # read_only streams the sheet; this second pass only needs raw cell text.
-    formula_wb = load_workbook(path, data_only=False, read_only=True)
+    formula_fh = path.open("rb")
+    formula_wb = load_workbook(formula_fh, data_only=False, read_only=True)
     try:
         for r, frow in enumerate(formula_wb[ws.title].iter_rows(values_only=True)):
             for c, fv in enumerate(frow):
@@ -166,6 +182,7 @@ def _read_excel(path: Path, sheet: str | None) -> Grid:
                     uncomputed.add((r, c))
     finally:
         formula_wb.close()
+        formula_fh.close()
 
     return Grid(
         file=path.name,

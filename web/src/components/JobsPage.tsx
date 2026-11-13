@@ -7,7 +7,7 @@ import { go } from "../lib/route";
 import type { Job } from "../lib/types";
 import { Button, Empty, ErrorNote, Panel } from "./ui";
 
-const ACCEPT = ".xlsx,.xlsm,.csv,.tsv,.txt,.pdf";
+const ACCEPT = ".xlsx,.xlsm,.xls,.csv,.tsv,.txt,.pdf";
 
 export function JobsPage() {
   const jobs = useQuery({ queryKey: ["jobs"], queryFn: api.jobs });
