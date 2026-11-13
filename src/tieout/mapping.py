@@ -17,6 +17,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from difflib import SequenceMatcher
+from functools import lru_cache
 from pathlib import Path
 from typing import Protocol
 
@@ -26,6 +27,12 @@ _NON_ALNUM = re.compile(r"[^a-z0-9#]+")
 
 
 def norm_header(text: object) -> str:
+    """Cached wrapper; see _norm_header."""
+    return _norm_header(text if isinstance(text, str) or text is None else str(text))
+
+
+@lru_cache(maxsize=8192)
+def _norm_header(text: str | None) -> str:
     """'Mkt. Rent ($)' -> 'mkt rent'. Keeps '#' because 'Unit #' is common."""
     if text is None:
         return ""
@@ -70,8 +77,9 @@ QUALIFIERS = frozenset(
 )
 
 
+@lru_cache(maxsize=8192)
 def score_header(header: str, spec: FieldSpec) -> float:
-    """How well a normalized header matches a field, from 0 to 1."""
+    """How well a normalized header matches a field, from 0 to 1. Pure, so cached."""
     if not header:
         return 0.0
     best = 0.0

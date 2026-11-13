@@ -148,5 +148,29 @@ def test_delete(client, flat_csv):
 
 def test_provenance_uses_the_uploaded_file_name(client, flat_csv):
     result = upload(client, flat_csv).json()["result"]
-    assert result["source"] == {"file": "flat_export.csv", "sheet": "flat_export", "header_rows": [1]}
+    assert result["source"]["file"] == "flat_export.csv"
+    assert result["source"]["sheet"] == "flat_export"
     assert result["rows"][0]["fields"]["unit"]["source"]["file"] == "flat_export.csv"
+
+
+def test_switching_to_an_unreadable_sheet_changes_nothing(client, tmp_path):
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    wb.active.title = "Notes"
+    wb.active.append(["Prepared by accounting"])
+    rr = wb.create_sheet("Rent Roll")
+    for row in [["Unit", "Tenant", "Rent"], ["101", "A", 1000], ["102", "B", 1100]]:
+        rr.append(row)
+    path = tmp_path / "two_sheets.xlsx"
+    wb.save(path)
+
+    body = upload(client, path).json()
+    job = body["job"]["id"]
+    assert body["result"]["source"]["sheet"] == "Rent Roll"  # the fullest sheet is picked
+    assert body["result"]["source"]["sheets"] == ["Notes", "Rent Roll"]
+
+    r = client.put(f"/api/jobs/{job}/settings", json={"sheet": "Notes"})
+    assert r.status_code == 422 and "Can't use that sheet" in r.json()["detail"]
+    after = client.get(f"/api/jobs/{job}")
+    assert after.status_code == 200 and after.json()["result"]["source"]["sheet"] == "Rent Roll"

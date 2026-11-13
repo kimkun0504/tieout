@@ -44,6 +44,7 @@ class CleanResult:
     skipped: dict[str, int] = dc_field(default_factory=dict)  # row kind -> count
     review: Review = dc_field(default_factory=Review)
     as_of: date | None = None
+    sheets: list[str] = dc_field(default_factory=list)
 
     @property
     def open_issues(self) -> list[Issue]:
@@ -90,9 +91,12 @@ def clean_file(
     as_of: date | None = None,
     review: Review | None = None,
     source_name: str | None = None,
+    grid: Grid | None = None,
 ) -> CleanResult:
+    """Clean one rent roll. Pass `grid` to reuse an already-read source (it is never modified)."""
     review = review or Review()
-    grid = read_grid(path, sheet, source_name)
+    if grid is None:
+        grid = read_grid(path, sheet, source_name)
     header = detect_header(grid)
 
     mappings = templates.load(header.headers) if templates else None
@@ -153,7 +157,9 @@ def clean_file(
     issues = validate.run_all(rows, totals, mappings, as_of) + extra_issues
     for issue in issues:
         issue.acknowledgment = review.ack_for(issue.id)
-    return CleanResult(grid.file, grid.sheet, header, mappings, rows, totals, issues, skipped, review, as_of)
+    return CleanResult(
+        grid.file, grid.sheet, header, mappings, rows, totals, issues, skipped, review, as_of, list(grid.sheets)
+    )
 
 
 # --- mapping ------------------------------------------------------------------------

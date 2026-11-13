@@ -170,3 +170,16 @@ def test_text_from_float_unit_number():
 def test_text_flags_auto_converted_dates():
     value, issue = parse_text(datetime(2026, 1, 2))
     assert value is None and "auto-converted" in issue
+
+
+@pytest.mark.parametrize("raw", ["2/30/2026", "13/01/2026", "2026-02-30"])
+def test_impossible_dates_are_flagged(raw):
+    value, issue = parse_date(raw)
+    assert value is None and issue
+
+
+def test_two_digit_years_use_a_fixed_pivot():
+    """Deterministic: the same file reads the same way next year."""
+    assert parse_date("1/2/68") == (date(2068, 1, 2), None)
+    assert parse_date("1/2/69") == (date(1969, 1, 2), None)
+    assert parse_date("1/2/26") == (date(2026, 1, 2), None)

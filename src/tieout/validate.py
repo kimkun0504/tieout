@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import date
 from decimal import Decimal
+from statistics import median
 
 from tieout.mapping import ColumnMapping
 from tieout.models import CleanRow, Issue, ReportedTotal, Severity
@@ -50,6 +51,7 @@ def run_all(
     issues += check_parse_issues(rows)
     issues += check_duplicates(rows)
     issues += check_row_rules(rows, as_of)
+    issues += check_outliers(rows)
     issues += check_tie_out(rows, totals)
     order = {Severity.ERROR: 0, Severity.WARNING: 1, Severity.INFO: 2}
     issues.sort(key=lambda i: (order[i.severity], i.row or 0))
@@ -213,6 +215,18 @@ def check_row_rules(rows: list[CleanRow], as_of: date | None) -> list[Issue]:
                         "current_rent",
                     )
                 )
+        move_in = row.get("move_in")
+        if as_of and move_in and move_in > as_of and status in ("occupied", "notice"):
+            issues.append(
+                Issue(
+                    Severity.WARNING,
+                    "move_in_after_report_date",
+                    f"Unit {unit} is {status} but its move-in date {show(move_in)} is after the report date "
+                    f"{show(as_of)}.",
+                    r,
+                    "move_in",
+                )
+            )
         if as_of and end and end < as_of and status in ("occupied", "notice"):
             issues.append(
                 Issue(
@@ -223,6 +237,47 @@ def check_row_rules(rows: list[CleanRow], as_of: date | None) -> list[Issue]:
                     "lease_end",
                 )
             )
+    return issues
+
+
+OUTLIER_LIMIT = Decimal("0.50")  # rent per sq ft more than 50% from its unit type's median
+OUTLIER_MIN_GROUP = 5
+
+
+def check_outliers(rows: list[CleanRow]) -> list[Issue]:
+    """Flag rent per sq ft far from the median of comparable units.
+
+    A misplaced decimal (145.00 for 1,450.00) or a rent typed into the wrong
+    unit usually passes every other rule; against its peers it stands out.
+    Units are compared within their unit type, and only in groups of five or
+    more, so small or mixed properties don't produce noise.
+    """
+    groups: dict[str, list[tuple[CleanRow, Decimal]]] = defaultdict(list)
+    for row in rows:
+        rent, sqft = row.get("current_rent"), row.get("sqft")
+        if row.get("status") in ("occupied", "notice") and rent and rent > 0 and sqft and sqft > 0:
+            groups[str(row.get("unit_type") or "")].append((row, rent / Decimal(str(sqft))))
+    issues = []
+    for unit_type, members in groups.items():
+        if len(members) < OUTLIER_MIN_GROUP:
+            continue
+        mid = Decimal(str(median(float(v) for _, v in members)))
+        if mid <= 0:
+            continue
+        for row, per_sf in members:
+            deviation = abs(per_sf - mid) / mid
+            if deviation > OUTLIER_LIMIT:
+                peers = f"{unit_type} units" if unit_type else "comparable units"
+                issues.append(
+                    Issue(
+                        Severity.WARNING,
+                        "rent_per_sqft_outlier",
+                        f"Unit {row.get('unit')}: {show(per_sf.quantize(Decimal('0.01')))} per sq ft is "
+                        f"{deviation:.0%} away from the median of {show(mid.quantize(Decimal('0.01')))} for {peers}.",
+                        row.source_row,
+                        "current_rent",
+                    )
+                )
     return issues
 
 

@@ -56,6 +56,7 @@ def to_payload(result: CleanResult) -> dict[str, Any]:
         "source": {
             "file": result.source_file,
             "sheet": result.sheet,
+            "sheets": result.sheets,
             "header_rows": [r + 1 for r in result.header.header_rows],
         },
         "ok": result.ok,

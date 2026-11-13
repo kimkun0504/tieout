@@ -260,3 +260,46 @@ def test_no_status_or_tenant_column_infers_from_rent(tmp_path):
     assert "vacant_with_rent" not in rules(r)
     assert "occupied_without_tenant" not in rules(r)  # there is no tenant column to be empty
     assert "status_inferred" in rules(r, Severity.INFO)
+
+
+def test_rent_per_sqft_outlier_catches_a_misplaced_decimal(tmp_path):
+    rows = [["Unit", "Unit Type", "Sq Ft", "Tenant", "Rent"]]
+    rows += [[f"10{i}", "1x1", 700, f"T{i}", 1400 + i * 10] for i in range(6)]
+    rows += [["107", "1x1", 700, "T7", 145]]  # 1,450 typed as 145
+    rows += [["201", "2x2", 1000, "U1", 2000]]  # different type, group too small to judge
+    r = clean_file(_xlsx(tmp_path, rows))
+    flagged = [i for i in r.issues if i.rule == "rent_per_sqft_outlier"]
+    assert [i.row for i in flagged] == [8]
+    assert "per sq ft" in flagged[0].message
+
+
+def test_move_in_after_report_date(tmp_path):
+    from datetime import date
+
+    rows = [["Unit", "Tenant", "Rent", "Move In"], ["101", "A", 1000, "12/15/2026"], ["102", "B", 1000, "1/1/2024"]]
+    path = _xlsx(tmp_path, rows)
+    assert "move_in_after_report_date" not in rules(clean_file(path))
+    r = clean_file(path, as_of=date(2026, 11, 1))
+    assert [i.row for i in r.issues if i.rule == "move_in_after_report_date"] == [2]
+
+
+def test_zip_bomb_and_non_zip_xlsx_are_refused(tmp_path):
+    import zipfile
+
+    import pytest
+
+    from tieout.ingest import UnsupportedFormat, read_grid
+
+    fake = tmp_path / "fake.xlsx"
+    fake.write_bytes(b"not a zip")
+    with pytest.raises(UnsupportedFormat, match="not a valid"):
+        read_grid(fake)
+    bomb = tmp_path / "bomb.xlsx"
+    with zipfile.ZipFile(bomb, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("xl/worksheets/sheet1.xml", b"0" * (20 * 1024 * 1024))  # compresses ~1000:1
+    with pytest.raises(UnsupportedFormat, match="too large"):
+        read_grid(bomb)
+
+
+def test_workbook_lists_its_sheets(stacked_xlsx):
+    assert clean_file(stacked_xlsx).sheets == ["Rent Roll"]

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,7 @@ class Grid:
     file: str
     sheet: str
     rows: list[list[Any]]
+    sheets: list[str] = field(default_factory=list)  # every sheet in the workbook
     # (min_row, min_col, max_row, max_col), 0-based inclusive
     merges: list[tuple[int, int, int, int]] = field(default_factory=list)
     # cells that hold a formula whose result was never calculated and saved
@@ -111,7 +113,27 @@ def _unsupported(suffix: str) -> Grid:
     raise UnsupportedFormat(f"Unsupported file type: {suffix or '(none)'}")
 
 
+MAX_EXPANDED_BYTES = 400 * 1024 * 1024
+MAX_COMPRESSION_RATIO = 250
+
+
+def check_xlsx(path: Path) -> None:
+    """Refuse files that are not real workbooks or would expand to an unsafe size (zip bombs)."""
+    try:
+        with zipfile.ZipFile(path) as z:
+            infos = z.infolist()
+    except zipfile.BadZipFile as e:
+        raise UnsupportedFormat("This is not a valid .xlsx file (it may be damaged or password-protected).") from e
+    expanded = sum(i.file_size for i in infos)
+    packed = sum(i.compress_size for i in infos) or 1
+    if expanded > MAX_EXPANDED_BYTES or expanded / packed > MAX_COMPRESSION_RATIO:
+        raise UnsupportedFormat(
+            f"This workbook expands to {expanded // (1024 * 1024)} MB, which is too large to process safely."
+        )
+
+
 def _read_excel(path: Path, sheet: str | None) -> Grid:
+    check_xlsx(path)
     # data_only=True returns the cached results of formulas instead of the formula text.
     wb = load_workbook(path, data_only=True)
     if sheet is not None:
@@ -128,17 +150,28 @@ def _read_excel(path: Path, sheet: str | None) -> Grid:
     # written by scripts or some exporters) reads as an empty cell, which would
     # silently skip a total's tie-out check. Find those cells so we can flag them.
     uncomputed: set[tuple[int, int]] = set()
-    formulas = load_workbook(path, data_only=False)[ws.title]
-    for r, frow in enumerate(formulas.iter_rows(values_only=True)):
-        for c, fv in enumerate(frow):
-            if (
-                isinstance(fv, str)
-                and fv.startswith("=")
-                and (r >= len(rows) or c >= len(rows[r]) or rows[r][c] is None)
-            ):
-                uncomputed.add((r, c))
+    # read_only streams the sheet; this second pass only needs raw cell text.
+    formula_wb = load_workbook(path, data_only=False, read_only=True)
+    try:
+        for r, frow in enumerate(formula_wb[ws.title].iter_rows(values_only=True)):
+            for c, fv in enumerate(frow):
+                if (
+                    isinstance(fv, str)
+                    and fv.startswith("=")
+                    and (r >= len(rows) or c >= len(rows[r]) or rows[r][c] is None)
+                ):
+                    uncomputed.add((r, c))
+    finally:
+        formula_wb.close()
 
-    return Grid(file=path.name, sheet=ws.title, rows=_trim(rows), merges=merges, uncomputed=uncomputed)
+    return Grid(
+        file=path.name,
+        sheet=ws.title,
+        rows=_trim(rows),
+        merges=merges,
+        uncomputed=uncomputed,
+        sheets=list(wb.sheetnames),
+    )
 
 
 def _read_delimited(path: Path) -> Grid:

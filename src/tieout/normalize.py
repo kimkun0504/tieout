@@ -126,6 +126,9 @@ def parse_date(value: Any) -> Parsed:
         return None, "month-to-month lease (no end date)"
     if re.fullmatch(r"\d+(\.\d+)?", s):
         return _from_serial(float(s))
+    fast = _fast_date(s)
+    if fast is not None:
+        return fast
     has_year = bool(_DATE_HAS_YEAR.search(s))
     has_month_day = bool(re.search(r"(?<!\d)\d{1,2}[/\-.]\d{1,2}(?!\d)", s)) or (
         bool(_MONTH_NAMES.search(s)) and bool(re.search(r"(?<!\d)\d{1,2}(?!\d)", s))
@@ -137,6 +140,30 @@ def parse_date(value: Any) -> Parsed:
         return date_parser.parse(s, dayfirst=False).date(), None
     except (ValueError, OverflowError):
         return None, f"could not read date {s!r}"
+
+
+_US_DATE = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4}|\d{2})$")
+_ISO_DATE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$")
+
+
+def _fast_date(s: str) -> Parsed | None:
+    """MM/DD/YYYY and YYYY-MM-DD cover most exports; parse them without dateutil."""
+    m = _US_DATE.match(s)
+    if m:
+        month, day, year = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        if year < 100:
+            # Fixed POSIX pivot (00-68 -> 2000s, 69-99 -> 1900s) so a file reads the
+            # same whatever day it is processed; dateutil's rolling window would not.
+            year += 2000 if year <= 68 else 1900
+    else:
+        m = _ISO_DATE.match(s)
+        if not m:
+            return None
+        year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    try:
+        return date(year, month, day), None
+    except ValueError:
+        return None, f"not a real date {s!r}"
 
 
 def _from_serial(n: float) -> Parsed:

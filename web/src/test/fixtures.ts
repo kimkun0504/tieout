@@ -17,7 +17,7 @@ export function issue(over: Partial<Issue> = {}): Issue {
 export function result(over: Partial<Result> = {}): Result {
   return {
     tieout_version: "0.1.0",
-    source: { file: "flat.csv", sheet: "flat", header_rows: [1] },
+    source: { file: "flat.csv", sheet: "flat", sheets: [], header_rows: [1] },
     ok: false,
     summary: {
       units: 1, status_counts: { occupied: 1 }, physical_occupancy: 1, total_current_rent: "6975.00",

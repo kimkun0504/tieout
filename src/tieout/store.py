@@ -18,6 +18,7 @@ import re
 import shutil
 import threading
 import uuid
+from collections import OrderedDict
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
@@ -25,7 +26,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from tieout.ingest import SUPPORTED_SUFFIXES
+from tieout.ingest import SUPPORTED_SUFFIXES, Grid, read_grid
 from tieout.mapping import TemplateStore
 from tieout.pipeline import CleanResult, clean_file
 from tieout.review import Review, now_iso
@@ -74,6 +75,11 @@ class JobStore:
         self.templates = TemplateStore(self.root / "templates")
         self._locks: dict[str, threading.Lock] = {}
         self._locks_guard = threading.Lock()
+        # Parsed source sheets. Sources never change, so a grid stays valid for
+        # the life of the job; review actions then skip re-reading the workbook.
+        self._grids: OrderedDict[tuple[str, str | None], Grid] = OrderedDict()
+        self._grids_guard = threading.Lock()
+        self.grid_cache_size = 8
 
     # --- paths and locking ------------------------------------------------------
 
@@ -131,6 +137,23 @@ class JobStore:
 
     def delete(self, job_id: str) -> None:
         shutil.rmtree(self._dir(job_id))
+        with self._grids_guard:
+            for key in [k for k in self._grids if k[0] == job_id]:
+                del self._grids[key]
+
+    def grid(self, job_id: str) -> Grid:
+        meta = self.meta(job_id)
+        key = (job_id, meta.sheet)
+        with self._grids_guard:
+            if key in self._grids:
+                self._grids.move_to_end(key)
+                return self._grids[key]
+        grid = read_grid(self.source_path(job_id), meta.sheet, meta.filename)
+        with self._grids_guard:
+            self._grids[key] = grid
+            while len(self._grids) > self.grid_cache_size:
+                self._grids.popitem(last=False)
+        return grid
 
     def source_path(self, job_id: str) -> Path:
         meta = self.meta(job_id)
@@ -156,6 +179,7 @@ class JobStore:
             as_of=date.fromisoformat(meta.as_of) if meta.as_of else None,
             review=self.review(job_id),
             source_name=meta.filename,
+            grid=self.grid(job_id),
         )
         summary = result.summary()
         if summary != meta.last_summary or result.ok != meta.last_ok:

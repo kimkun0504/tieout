@@ -146,7 +146,7 @@ export interface AuditEvent {
 
 export interface Result {
   tieout_version: string;
-  source: { file: string; sheet: string; header_rows: number[] };
+  source: { file: string; sheet: string; sheets: string[]; header_rows: number[] };
   ok: boolean;
   summary: Summary;
   metrics: Metrics;

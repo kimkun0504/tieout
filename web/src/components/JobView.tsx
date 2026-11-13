@@ -96,7 +96,9 @@ export function JobView({ id }: { id: string }) {
 
 function JobHeader({ data }: { data: JobResponse }) {
   const { job, result } = data;
-  const settings = useJobAction(job.id, (asOf: string | null) => api.settings(job.id, { sheet: job.sheet, as_of: asOf }));
+  const settings = useJobAction(job.id, (next: { sheet: string | null; as_of: string | null }) =>
+    api.settings(job.id, next),
+  );
   const s = result.summary;
   return (
     <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
@@ -121,6 +123,11 @@ function JobHeader({ data }: { data: JobResponse }) {
         )}
         {s.warnings > 0 && <span className="text-sm text-ink-2">{s.warnings} to check</span>}
       </div>
+      {settings.error && (
+        <div className="basis-full">
+          <ErrorNote error={settings.error} />
+        </div>
+      )}
       <div className="ml-auto flex flex-wrap items-end gap-4">
         <label className="flex flex-col text-sm text-ink-2">
           Report date
@@ -130,11 +137,27 @@ function JobHeader({ data }: { data: JobResponse }) {
             defaultValue={job.as_of ?? ""}
             onBlur={(e) => {
               const v = e.target.value || null;
-              if (v !== job.as_of) settings.mutate(v);
+              if (v !== job.as_of) settings.mutate({ sheet: job.sheet, as_of: v });
             }}
             className="rounded border border-rule bg-surface px-2 py-1 text-ink"
           />
         </label>
+        {result.source.sheets.length > 1 && (
+          <label className="flex flex-col text-sm text-ink-2">
+            Sheet
+            <select
+              value={result.source.sheet}
+              onChange={(e) => settings.mutate({ sheet: e.target.value, as_of: job.as_of })}
+              className="rounded border border-rule bg-surface px-2 py-1 text-ink"
+            >
+              {result.source.sheets.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <ExportMenu jobId={job.id} ok={result.ok} />
       </div>
     </div>

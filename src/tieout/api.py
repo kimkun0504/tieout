@@ -18,13 +18,14 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from tieout import __version__
 from tieout.export import render_report, to_payload, write_csv, write_issues, write_json, write_xlsx
-from tieout.ingest import UnsupportedFormat, read_grid
+from tieout.ingest import UnsupportedFormat
 from tieout.schema import RENT_ROLL_FIELDS
 from tieout.store import MAX_UPLOAD_BYTES, JobMeta, JobNotFound, JobStore
 
@@ -65,6 +66,7 @@ def _job_view(meta: JobMeta) -> dict[str, Any]:
 def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
     store = JobStore(data_dir)
     app = FastAPI(title="tieout", version=__version__)
+    app.add_middleware(GZipMiddleware, minimum_size=2048)
 
     @app.exception_handler(JobNotFound)
     async def _not_found(_req: Any, _exc: JobNotFound) -> JSONResponse:
@@ -147,21 +149,24 @@ def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
 
     @app.put("/api/jobs/{job_id}/settings")
     def settings(job_id: str, body: SettingsIn) -> dict[str, Any]:
+        """Change sheet or report date. If the new sheet can't be read, nothing changes."""
         with store.lock(job_id):
             meta = store.meta(job_id)
+            previous = (meta.sheet, meta.as_of)
             meta.sheet = body.sheet or None
             meta.as_of = body.as_of.isoformat() if body.as_of else None
             store.save_meta(meta)
-        try:
-            return result_response(job_id)
-        except ValueError as e:
-            raise HTTPException(422, str(e)) from e
+            try:
+                return result_response(job_id)
+            except (UnsupportedFormat, ValueError) as e:
+                meta.sheet, meta.as_of = previous
+                store.save_meta(meta)
+                raise HTTPException(422, f"Can't use that sheet: {e}") from e
 
     @app.get("/api/jobs/{job_id}/source")
     def source(job_id: str) -> dict[str, Any]:
         """The raw sheet, so the UI can show every value in its original context."""
-        meta = store.meta(job_id)
-        grid = read_grid(store.source_path(job_id), meta.sheet, meta.filename)
+        grid = store.grid(job_id)
         rows = [[_cell_text(v) for v in row] for row in grid.rows[:MAX_SOURCE_ROWS]]
         return {
             "sheet": grid.sheet,

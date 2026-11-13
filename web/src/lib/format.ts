@@ -108,6 +108,8 @@ const RULES: Record<string, string> = {
   unmapped_column: "Column not used",
   status_inferred: "Status inferred",
   correction_orphaned: "Correction has no row",
+  rent_per_sqft_outlier: "Rent per sq ft out of line",
+  move_in_after_report_date: "Move-in after report date",
 };
 
 export function ruleLabel(rule: string): string {
