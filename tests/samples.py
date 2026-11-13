@@ -163,7 +163,7 @@ def make_flat_csv_with_problems(path: Path) -> Path:
         ],
         ["Total", "", "", "3965", "7,100.00", "7,025.00", "2,350.00", "", "", "", "125.00"],
     ]
-    with path.open("w", newline="") as f:
+    with path.open("w", newline="", encoding="utf-8") as f:
         csv.writer(f).writerows(rows)
     return path
 

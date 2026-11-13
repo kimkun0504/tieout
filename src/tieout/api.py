@@ -322,7 +322,7 @@ def create_app(data_dir: str | Path = "tieout-data", allowed_hosts: list[str] | 
             if fmt == "jsonl":
                 write_jsonl(result, path, redact_tenants)
             elif fmt == "report":
-                path.write_text(render_report(result))
+                path.write_text(render_report(result), encoding="utf-8")
             else:
                 {"csv": write_csv, "xlsx": write_xlsx, "json": write_json, "issues": write_issues}[fmt](result, path)
             data = path.read_bytes()

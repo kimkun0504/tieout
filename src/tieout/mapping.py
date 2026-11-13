@@ -206,7 +206,7 @@ class TemplateStore:
         p = self._path(header_fingerprint([headers[c] for c in sorted(headers)]))
         if not p.exists():
             return None
-        data = json.loads(p.read_text())
+        data = json.loads(p.read_text(encoding="utf-8"))
         if data.get("version") != self.VERSION:
             return None  # old position-based template: ignore rather than risk a wrong mapping
         by_key: dict[str, str | None] = data["fields_by_header"]
@@ -230,5 +230,5 @@ class TemplateStore:
             "fields_by_header": {keys[c]: by_col.get(c) for c in sorted(headers)},
         }
         p = self._path(fp)
-        p.write_text(json.dumps(payload, indent=2))
+        p.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         return p

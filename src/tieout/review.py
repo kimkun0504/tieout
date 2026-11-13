@@ -127,10 +127,10 @@ class Review:
     def save(self, path: str | Path) -> None:
         path = Path(path)
         tmp = path.with_suffix(path.suffix + ".tmp")
-        tmp.write_text(json.dumps(self.to_dict(), indent=2))
+        tmp.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
         tmp.replace(path)  # atomic on POSIX: a crash never leaves a half-written review
 
     @classmethod
     def load(cls, path: str | Path) -> Review:
         path = Path(path)
-        return cls.from_dict(json.loads(path.read_text())) if path.exists() else cls()
+        return cls.from_dict(json.loads(path.read_text(encoding="utf-8"))) if path.exists() else cls()

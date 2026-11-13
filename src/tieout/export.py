@@ -39,12 +39,12 @@ def write_all(result: CleanResult, out_dir: str | Path) -> dict[str, Path]:
     write_csv(result, paths["csv"])
     write_json(result, paths["json"])
     write_issues(result, paths["issues"])
-    paths["report"].write_text(render_report(result))
+    paths["report"].write_text(render_report(result), encoding="utf-8")
     return paths
 
 
 def write_csv(result: CleanResult, path: Path) -> None:
-    with path.open("w", newline="") as f:
+    with path.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow([*COLUMNS, "section", "source_row"])
         for row in result.rows:
@@ -128,11 +128,11 @@ def _computed_total(result: CleanResult, scope: list[int], name: str) -> str:
 
 
 def write_json(result: CleanResult, path: Path) -> None:
-    path.write_text(json.dumps(to_payload(result), indent=2, default=str))
+    path.write_text(json.dumps(to_payload(result), indent=2, default=str), encoding="utf-8")
 
 
 def write_issues(result: CleanResult, path: Path) -> None:
-    with path.open("w", newline="") as f:
+    with path.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["id", "severity", "status", "rule", "row", "field", "cells", "message", "note"])
         for i in result.issues:
@@ -401,7 +401,7 @@ def to_jsonl_records(result: CleanResult, redact_tenants: bool = False) -> list[
 
 
 def write_jsonl(result: CleanResult, path: Path, redact_tenants: bool = False) -> None:
-    with path.open("w") as f:
+    with path.open("w", encoding="utf-8") as f:
         for rec in to_jsonl_records(result, redact_tenants):
             f.write(json.dumps(rec, default=str) + "\n")
 

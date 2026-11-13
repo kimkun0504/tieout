@@ -57,7 +57,7 @@ class JobMeta:
 
 def _write_json(path: Path, data: Any) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(data, indent=2, default=str))
+    tmp.write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
     tmp.replace(path)
 
 
@@ -123,7 +123,7 @@ class JobStore:
         return meta
 
     def meta(self, job_id: str) -> JobMeta:
-        return JobMeta(**json.loads((self._dir(job_id) / "meta.json").read_text()))
+        return JobMeta(**json.loads((self._dir(job_id) / "meta.json").read_text(encoding="utf-8")))
 
     def save_meta(self, meta: JobMeta) -> None:
         meta.updated_at = now_iso()
@@ -134,7 +134,7 @@ class JobStore:
         for d in self.jobs_dir.iterdir():
             if (d / "meta.json").exists():
                 try:
-                    out.append(JobMeta(**json.loads((d / "meta.json").read_text())))
+                    out.append(JobMeta(**json.loads((d / "meta.json").read_text(encoding="utf-8"))))
                 except (json.JSONDecodeError, TypeError):
                     continue
         return sorted(out, key=lambda m: m.uploaded_at, reverse=True)

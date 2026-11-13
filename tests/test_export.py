@@ -102,3 +102,16 @@ def test_two_overrides_for_one_field_keep_the_leftmost(tmp_path):
         "A": "current_rent",
         "B": None,
     }
+
+
+def test_outputs_are_utf8_whatever_the_platform_default(tmp_path):
+    from tieout.export import write_all
+    from tieout.ingest import Grid
+    from tieout.pipeline import clean_file
+
+    rows = [["Unit", "Tenant", "Rent"], ["101", "Zoë Ångström", 1200], ["102", "李小龍", 1300]]
+    result = clean_file("x.csv", grid=Grid("x.csv", "x", rows))
+    paths = write_all(result, tmp_path)
+    for key in ("csv", "report", "jsonl"):
+        text = paths[key].read_bytes().decode("utf-8")  # raises if written in a legacy code page
+        assert "Ångström" in text or "\\u00c5ngstr" in text
