@@ -195,8 +195,8 @@ def parse_status(value: Any) -> Parsed:
         return None, f"unknown status {value!r}"
     words = set(s.split())
     # Notice must be checked before occupied: "Occupied NTV" is a notice unit.
-    if ("ntv" in words or "notice" in words) and "no notice" not in s:
-        return "notice", None
+    if (("ntv" in words or "notice" in words) and "no notice" not in s) or "move out" in s or "moveout" in s:
+        return "notice", None  # "Pending Move-Out" is a current tenant leaving, not a future lease
     if s.startswith(_VACANT_PREFIXES):
         return "vacant", None  # includes "Vacant-Leased": empty today, with a future lease
     if s.startswith(("future", "applicant", "pending", "approved", "pre leased", "preleased", "pre lease")):
