@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import { useJob, useJobAction } from "../lib/hooks";
 import { go } from "../lib/route";
@@ -13,7 +13,7 @@ import { Metrics } from "./Metrics";
 import { SourceView } from "./SourceView";
 import { StackingPlan } from "./StackingPlan";
 import { TieOutStrip } from "./TieOutStrip";
-import { Empty, ErrorNote } from "./ui";
+import { Button, Empty, ErrorNote } from "./ui";
 import { UnitsTable } from "./UnitsTable";
 
 type Tab = "units" | "mapping" | "source" | "audit";
@@ -36,6 +36,68 @@ export function JobView({ id }: { id: string }) {
   }
 
   const { result } = job.data;
+  return (
+    <Review
+      id={id}
+      data={job.data}
+      selection={selection}
+      setSelection={setSelection}
+      tab={tab}
+      setTab={setTab}
+      result={result}
+    />
+  );
+}
+
+function Review({
+  id,
+  data,
+  result,
+  selection,
+  setSelection,
+  tab,
+  setTab,
+}: {
+  id: string;
+  data: JobResponse;
+  result: JobResponse["result"];
+  selection: Selection;
+  setSelection: (s: Selection | ((s: Selection) => Selection)) => void;
+  tab: Tab;
+  setTab: (t: Tab) => void;
+}) {
+  // Open problems in file order, for stepping through with j / k.
+  const problems = useMemo(
+    () =>
+      result.issues
+        .filter((i) => !i.acknowledgment && i.severity !== "info" && i.row !== null)
+        .sort((a, b) => (a.row ?? 0) - (b.row ?? 0)),
+    [result.issues],
+  );
+  const step = (dir: 1 | -1) => {
+    if (problems.length === 0) return;
+    const current = problems.findIndex((i) => i.row === selection.row && i.field === selection.field);
+    const after = problems.findIndex((i) => (i.row ?? 0) > (selection.row ?? 0));
+    let idx: number;
+    if (current >= 0) idx = (current + dir + problems.length) % problems.length;
+    else if (dir === 1) idx = after >= 0 ? after : 0;
+    else idx = (after > 0 ? after : problems.length) - 1;
+    const target = problems[idx]!;
+    setSelection({ row: target.row, field: target.field });
+    if (result.rows.some((r) => r.source_row === target.row)) setTab("units");
+  };
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      if (e.metaKey || e.ctrlKey || e.altKey || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName)) return;
+      if (e.key === "j") step(1);
+      if (e.key === "k") step(-1);
+      if (e.key === "Escape") setSelection(NONE);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   const showInSource = (cell: string) => {
     setSelection((s) => ({ ...s, cell }));
     setTab("source");
@@ -43,7 +105,7 @@ export function JobView({ id }: { id: string }) {
 
   return (
     <main className="space-y-4 px-5 py-5">
-      <JobHeader data={job.data} />
+      <JobHeader data={data} />
       <TieOutStrip result={result} onSelect={(row, field) => setSelection({ row, field })} />
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_22rem]">
         <StackingPlan result={result} selection={selection} onSelect={(row) => setSelection({ row, field: null })} />
@@ -59,7 +121,8 @@ export function JobView({ id }: { id: string }) {
       </div>
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <section className="min-w-0 rounded-md border border-rule bg-surface">
-          <div role="tablist" aria-label="Review views" className="flex gap-1 border-b border-rule-soft px-3">
+          <div className="flex items-center border-b border-rule-soft pr-3">
+          <div role="tablist" aria-label="Review views" className="flex gap-1 px-3">
             {(
               [
                 ["units", `Units (${result.rows.length})`],
@@ -80,6 +143,18 @@ export function JobView({ id }: { id: string }) {
                 {label}
               </button>
             ))}
+          </div>
+          {problems.length > 0 && (
+            <div className="ml-auto flex items-center gap-1 text-sm text-ink-2">
+              <span className="hidden sm:inline">{problems.length} open</span>
+              <Button onClick={() => step(-1)} aria-label="Previous problem" title="Previous problem (k)">
+                Previous
+              </Button>
+              <Button onClick={() => step(1)} aria-label="Next problem" title="Next problem (j)">
+                Next problem
+              </Button>
+            </div>
+          )}
           </div>
           <div role="tabpanel">
             {tab === "units" && <UnitsTable result={result} selection={selection} onSelect={setSelection} />}

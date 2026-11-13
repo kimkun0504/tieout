@@ -69,3 +69,29 @@ describe("IssueQueue", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("A note is required");
   });
 });
+
+describe("UnitsTable keyboard navigation", () => {
+  it("moves between cells with the arrow keys like a spreadsheet", async () => {
+    const { UnitsTable } = await import("./UnitsTable");
+    const r = result();
+    r.rows.push({
+      source_row: 3,
+      section: null,
+      fields: {
+        unit: { value: "1B", raw: "1B", source: null, derived: false },
+        current_rent: { value: "100.00", raw: "100", source: null, derived: false },
+      },
+      charges: [],
+    });
+    const onSelect = vi.fn();
+    wrap(<UnitsTable result={r} selection={{ row: 2, field: "unit" }} onSelect={onSelect} />);
+    const start = screen.getByRole("button", { name: "Unit for row 2" });
+    expect(start).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("button", { name: "Unit for row 3" })).toHaveAttribute("tabindex", "-1");
+    start.focus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(onSelect).toHaveBeenLastCalledWith({ row: 3, field: "unit" });
+    await userEvent.keyboard("{ArrowRight}");
+    expect(onSelect).toHaveBeenLastCalledWith({ row: 2, field: "current_rent" });
+  });
+});

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { type KeyboardEvent, useMemo, useState } from "react";
 import { fieldLabel, fmtValue } from "../lib/format";
 import { issuesByRow, type Selection } from "../lib/selection";
 import type { Issue, Result, Row, TracedValue } from "../lib/types";
@@ -77,7 +77,7 @@ export function UnitsTable({
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody onKeyDown={(e) => moveWithKeys(e, rows, columns, selection, onSelect)}>
             {rows.map((r, i) => {
               const prev = rows[i - 1];
               const newSection = r.section && r.section !== prev?.section;
@@ -91,6 +91,9 @@ export function UnitsTable({
                   selection={selection}
                   onSelect={onSelect}
                   sectionLabel={newSection ? r.section : null}
+                  tabStop={
+                    rows.some((x) => x.source_row === selection.row) ? selection.row === r.source_row : i === 0
+                  }
                 />
               );
             })}
@@ -110,7 +113,9 @@ function UnitRow({
   selection,
   onSelect,
   sectionLabel,
+  tabStop,
 }: {
+  tabStop: boolean;
   row: Row;
   columns: string[];
   types: Record<string, string>;
@@ -143,6 +148,8 @@ function UnitRow({
               }`}
             >
               <button
+                data-cell={`${row.source_row}:${c}`}
+                tabIndex={tabStop && (selection.field ? selection.field === c : c === columns[0]) ? 0 : -1}
                 onClick={() => onSelect({ row: row.source_row, field: c })}
                 aria-label={`${fieldLabel(c)} for row ${row.source_row}`}
                 className={`block w-full whitespace-nowrap px-3 py-1.5 ${
@@ -164,4 +171,30 @@ function cellTint(tv: TracedValue | undefined): string {
   if (tv.correction) return "bg-corrected";
   if (tv.derived) return "bg-derived";
   return "";
+}
+
+/** Arrow keys move between cells like a spreadsheet; Home/End jump to the row's ends. */
+function moveWithKeys(
+  e: KeyboardEvent,
+  rows: Row[],
+  columns: string[],
+  selection: Selection,
+  onSelect: (s: Selection) => void,
+) {
+  const keys = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"];
+  if (!keys.includes(e.key) || rows.length === 0) return;
+  e.preventDefault();
+  let r = Math.max(0, rows.findIndex((x) => x.source_row === selection.row));
+  let c = Math.max(0, columns.indexOf(selection.field ?? ""));
+  if (e.key === "ArrowUp") r = Math.max(0, r - 1);
+  if (e.key === "ArrowDown") r = Math.min(rows.length - 1, r + 1);
+  if (e.key === "ArrowLeft") c = Math.max(0, c - 1);
+  if (e.key === "ArrowRight") c = Math.min(columns.length - 1, c + 1);
+  if (e.key === "Home") c = 0;
+  if (e.key === "End") c = columns.length - 1;
+  const next = { row: rows[r]!.source_row, field: columns[c]! };
+  onSelect(next);
+  requestAnimationFrame(() =>
+    document.querySelector<HTMLButtonElement>(`[data-cell="${next.row}:${next.field}"]`)?.focus(),
+  );
 }
