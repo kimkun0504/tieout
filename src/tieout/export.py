@@ -36,7 +36,7 @@ def write_csv(result: CleanResult, path: Path) -> None:
         w = csv.writer(f)
         w.writerow(COLUMNS + ["section", "source_row"])
         for row in result.rows:
-            w.writerow([_csv_value(row.get(c)) for c in COLUMNS] + [row.section or "", row.source_row])
+            w.writerow([_csv_value(row.get(c)) for c in COLUMNS] + [_safe(row.section or ""), row.source_row])
 
 
 def write_json(result: CleanResult, path: Path) -> None:
@@ -66,7 +66,7 @@ def write_issues(result: CleanResult, path: Path) -> None:
         w = csv.writer(f)
         w.writerow(["severity", "rule", "row", "field", "cells", "message"])
         for i in result.issues:
-            w.writerow([i.severity.value, i.rule, i.row or "", i.field or "", " ".join(r.cell for r in i.refs), i.message])
+            w.writerow([i.severity.value, i.rule, i.row or "", i.field or "", " ".join(r.cell for r in i.refs), _safe(i.message)])
 
 
 def render_report(result: CleanResult) -> str:
@@ -84,10 +84,10 @@ def render_report(result: CleanResult) -> str:
         f"| Units | {s['units']} |",
         f"| Status | {', '.join(f'{k} {v}' for k, v in sorted(s['status_counts'].items()))} |",
         f"| Physical occupancy | {occ} |",
-        f"| Total current rent | {s['total_current_rent']:,.2f} |",
+        f"| Total current rent | {Decimal(s['total_current_rent']):,.2f} |",
     ]
     if s["total_market_rent"]:
-        lines.append(f"| Total market rent | {s['total_market_rent']:,.2f} |")
+        lines.append(f"| Total market rent | {Decimal(s['total_market_rent']):,.2f} |")
     if s["total_sqft"]:
         lines.append(f"| Total sq ft | {s['total_sqft']:,} |")
     if result.skipped:
@@ -95,21 +95,39 @@ def render_report(result: CleanResult) -> str:
 
     lines += ["", "## Column mapping", "", "| Source column | Field | Confidence | Method |", "| --- | --- | --- | --- |"]
     for m in result.mappings:
-        lines.append(f"| {m.header} | {m.field or '(not used)'} | {m.confidence:.2f} | {m.method} |")
+        lines.append(f"| {_md(m.header)} | {m.field or '(not used)'} | {m.confidence:.2f} | {m.method} |")
 
     lines += ["", "## Issues", ""]
     if not result.issues:
         lines.append("None.")
     for i in result.issues:
         where = f" (row {i.row})" if i.row else ""
-        lines.append(f"- **{i.severity.value}** `{i.rule}`{where}: {i.message}")
+        lines.append(f"- **{i.severity.value}** `{i.rule}`{where}: {_md(i.message)}")
     return "\n".join(lines) + "\n"
 
 
+_FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _safe(text: str) -> str:
+    """Stop spreadsheet apps from running cell text as a formula (CSV injection, OWASP).
+
+    A tenant name like '=HYPERLINK(...)' is written as "'=HYPERLINK(...)".
+    """
+    return "'" + text if text.startswith(_FORMULA_START) else text
+
+
 def _csv_value(v: object) -> object:
-    """Keep money as exact two-decimal text (1300.00), dates as ISO, blanks empty."""
+    """Money as exact two-decimal text (1300.00, -100.00), dates as ISO, text made formula-safe."""
     if v is None:
         return ""
     if isinstance(v, Decimal):
         return str(v)
+    if isinstance(v, str):
+        return _safe(v)
     return jsonable(v)
+
+
+def _md(text: str) -> str:
+    """Escape characters that would break a Markdown table or list."""
+    return text.replace("|", "\\|").replace("\n", " ")

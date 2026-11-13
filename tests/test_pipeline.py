@@ -79,7 +79,7 @@ def test_summary(stacked_xlsx):
     assert s["units"] == 5
     assert s["status_counts"] == {"occupied": 4, "vacant": 1}
     assert s["physical_occupancy"] == 0.8
-    assert s["total_current_rent"] == 6775.0
+    assert s["total_current_rent"] == "6775.00"
 
 
 # --- flat CSV with planted problems ----------------------------------------

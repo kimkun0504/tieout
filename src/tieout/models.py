@@ -80,8 +80,9 @@ class ReportedTotal:
 
 
 def jsonable(v: Any) -> Any:
+    """JSON-safe value. Money stays an exact decimal string ("1425.10"), never a float."""
     if isinstance(v, Decimal):
-        return float(v)
+        return str(v)
     if isinstance(v, date):
         return v.isoformat()
     return v
