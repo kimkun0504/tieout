@@ -129,7 +129,7 @@ def test_source_and_exports(client, stacked_xlsx):
     from openpyxl import load_workbook
 
     wb = load_workbook(io.BytesIO(client.get(f"/api/jobs/{job}/export/xlsx").content))
-    assert wb.sheetnames == ["Rent Roll", "Issues", "Summary"]
+    assert wb.sheetnames == ["Rent Roll", "Issues", "Summary", "Fields"]
 
 
 def test_settings_and_templates(client, flat_csv, tmp_path):

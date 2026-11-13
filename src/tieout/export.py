@@ -418,7 +418,22 @@ def write_xlsx(result: CleanResult, path: Path) -> None:
             continue
         summary.append([k, v])
     summary.append(["source_file", result.source_file])
+    summary.append(["as_of", result.as_of])
     summary.append(["generated_by", f"tieout {__version__}"])
+
+    fields = wb.create_sheet("Fields")
+    fields.append(["column", "type", "description"])
+    for cell in fields[1]:
+        cell.font = _HEADER_FONT
+    for name in COLUMNS:
+        spec = FIELDS_BY_NAME[name]
+        fields.append([name, spec.type.value, spec.description])
+    fields.append(["section", "text", "Section or building label above the unit"])
+    fields.append(["source_row", "number", "Row in the original file this unit came from"])
+    fields.append([])
+    fields.append(["Shading on the Rent Roll sheet: blue = filled in by tieout, amber = corrected by a reviewer."])
+    fields.column_dimensions["A"].width = 18
+    fields.column_dimensions["C"].width = 70
     _text_never_formula(wb)
     wb.save(path)
 
