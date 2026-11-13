@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field as dc_field
 from datetime import date
 from decimal import Decimal
@@ -19,22 +20,49 @@ class Severity(str, Enum):
 
 @dataclass
 class TracedValue:
-    """A cleaned value plus the raw text it came from and where."""
+    """A cleaned value plus the raw text it came from and where.
+
+    `derived` marks values computed by tieout (status inferred from a tenant
+    name, rent rolled up from charge lines). `correction` is set when a reviewer
+    overrode the value; `original` then holds what the pipeline produced.
+    """
 
     value: Any
     raw: Any
     source: SourceRef | None
-    derived: bool = False  # True when inferred (e.g. status from tenant name) rather than read
+    derived: bool = False
     issue: str | None = None
+    correction: Correction | None = None
+    original: Any = None
+    sources: list[SourceRef] = dc_field(default_factory=list)  # extra cells for rolled-up values
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        out: dict[str, Any] = {
             "value": jsonable(self.value),
             "raw": jsonable(self.raw),
             "source": self.source.to_dict() if self.source else None,
             "derived": self.derived,
-            **({"issue": self.issue} if self.issue else {}),
         }
+        if self.sources:
+            out["sources"] = [s.to_dict() for s in self.sources]
+        if self.issue:
+            out["issue"] = self.issue
+        if self.correction:
+            out["original"] = jsonable(self.original)
+            out["correction"] = self.correction.to_dict()
+        return out
+
+
+@dataclass
+class Charge:
+    """One charge line of a unit (rent, parking, pet fee...)."""
+
+    code: TracedValue
+    amount: TracedValue
+    category: str  # "rent" | "concession" | "other"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"code": self.code.to_dict(), "amount": self.amount.to_dict(), "category": self.category}
 
 
 @dataclass
@@ -42,10 +70,40 @@ class CleanRow:
     source_row: int  # 1-based row in the original sheet
     section: str | None
     values: dict[str, TracedValue] = dc_field(default_factory=dict)
+    charges: list[Charge] = dc_field(default_factory=list)
 
     def get(self, name: str) -> Any:
         tv = self.values.get(name)
         return tv.value if tv else None
+
+
+@dataclass(frozen=True)
+class Correction:
+    """A reviewer's override of one field on one source row."""
+
+    source_row: int
+    field: str
+    value: str | None  # as typed by the reviewer; parsed with the field's type
+    reason: str
+    author: str = ""
+    at: str = ""  # ISO timestamp
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"source_row": self.source_row, "field": self.field, "value": self.value,
+                "reason": self.reason, "author": self.author, "at": self.at}
+
+
+@dataclass(frozen=True)
+class Acknowledgment:
+    """A reviewer accepted an issue as-is, with a note."""
+
+    issue_id: str
+    note: str
+    author: str = ""
+    at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"issue_id": self.issue_id, "note": self.note, "author": self.author, "at": self.at}
 
 
 @dataclass
@@ -56,9 +114,22 @@ class Issue:
     row: int | None = None  # 1-based source row
     field: str | None = None
     refs: list[SourceRef] = dc_field(default_factory=list)
+    acknowledgment: Acknowledgment | None = None
+
+    @property
+    def id(self) -> str:
+        """Stable across re-runs: built from what the issue is about, not its wording."""
+        key = f"{self.rule}|{self.row}|{self.field}|{','.join(r.cell for r in self.refs)}"
+        return hashlib.sha1(key.encode()).hexdigest()[:12]
+
+    @property
+    def open(self) -> bool:
+        return self.acknowledgment is None
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "id": self.id,
+            "acknowledgment": self.acknowledgment.to_dict() if self.acknowledgment else None,
             "severity": self.severity.value,
             "rule": self.rule,
             "message": self.message,

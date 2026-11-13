@@ -27,6 +27,7 @@ class RowKind(str, Enum):
     REPEATED_HEADER = "repeated_header"
     BLANK = "blank"
     NOTE = "note"
+    CHARGE = "charge"  # extra charge line belonging to the unit above
 
 
 @dataclass
@@ -110,9 +111,11 @@ def _is_noise(v: Any) -> bool:
     return bool(_NOISE_RE.match(_text(v)))
 
 
-def classify_rows(grid: Grid, header: HeaderInfo, unit_col: int | None) -> list[ClassifiedRow]:
+def classify_rows(
+    grid: Grid, header: HeaderInfo, unit_col: int | None, charge_cols: tuple[int, ...] = ()
+) -> list[ClassifiedRow]:
     """Label each row below the header. Order matters:
-    blank -> repeated header -> total -> lone cell (section / noise) -> no unit -> data.
+    blank -> repeated header -> total -> charge line -> lone cell (section / noise) -> no unit -> data.
     """
     start = max(header.header_rows) + 1
     header_norm = {c: norm_header(t) for c, t in header.headers.items()}
@@ -142,6 +145,20 @@ def classify_rows(grid: Grid, header: HeaderInfo, unit_col: int | None) -> list[
             if label is not None:
                 out.append(ClassifiedRow(r, RowKind.TOTAL, section, label=label))
                 continue
+
+        # Charge-line layouts list one unit's charges on several rows; only the first
+        # carries the unit. A row with no unit whose cells all sit in the charge
+        # columns, right after a unit or another charge line, belongs to that unit.
+        prev = next((o for o in reversed(out) if o.kind is not RowKind.BLANK), None)
+        if (
+            charge_cols
+            and not unit_text
+            and prev is not None
+            and prev.kind in (RowKind.DATA, RowKind.CHARGE)
+            and all(c in charge_cols for c, _ in filled)
+        ):
+            out.append(ClassifiedRow(r, RowKind.CHARGE, section))
+            continue
 
         if len(filled) == 1 and not (filled[0][0] == unit_col and _looks_like_unit_code(texts[0])):
             v = filled[0][1]

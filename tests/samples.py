@@ -60,3 +60,25 @@ def make_flat_csv_with_problems(path: Path) -> Path:
     with path.open("w", newline="") as f:
         csv.writer(f).writerows(rows)
     return path
+
+
+def make_charge_lines_xlsx(path: Path) -> Path:
+    """Charge-line layout: each unit's first row carries the unit and its first
+    charge; extra charges (parking, pet, concessions) follow on rows with no
+    unit. The total row reports the sum of every charge line."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Rent Roll"
+    ws.append(["Birch Point Residences - Rent Roll with Lease Charges"])
+    ws.append([])
+    ws.append(["Unit", "Unit Type", "Sq Ft", "Resident", "Status", "Market Rent", "Charge Code", "Amount", "Lease From", "Lease To"])
+    ws.append(["A101", "1x1", 700, "Chen, Lily", "Occupied", 1500, "RENT", 1450, "1/1/2026", "12/31/2026"])
+    ws.append([None, None, None, None, None, None, "PARK", 75])
+    ws.append([None, None, None, None, None, None, "PET", 35])
+    ws.append(["A102", "1x1", 700, "Okafor, Ben", "Occupied-NTV", 1500, "RENT", 1500, "3/1/2025", "2/28/2026"])
+    ws.append([None, None, None, None, None, None, "CONC", -100])
+    ws.append(["A103", "2x2", 1050, "VACANT", "Vacant", 2100])
+    ws.append(["A104", "2x2", 1050, "Diaz, Rosa", "Occupied", 2100, "RENT", 2050, "7/1/2026", "6/30/2027"])
+    ws.append(["Total", None, 3500, None, None, 7200, None, 5010])
+    wb.save(path)
+    return path

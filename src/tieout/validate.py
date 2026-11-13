@@ -38,6 +38,8 @@ def run_all(
 def check_mapping(mappings: list[ColumnMapping]) -> list[Issue]:
     issues = []
     mapped = {m.field for m in mappings if m.field}
+    if {"charge_code", "charge_amount"} <= mapped:
+        mapped = mapped | {"current_rent"}  # rolled up from rent charge lines
     for spec in FIELDS_BY_NAME.values():
         if spec.required and spec.name not in mapped:
             issues.append(Issue(Severity.ERROR, "required_column_missing", f"No column found for required field '{spec.name}'."))
@@ -132,7 +134,7 @@ def check_tie_out(rows: list[CleanRow], totals: list[ReportedTotal]) -> list[Iss
             if spec is None or spec.type.value not in ("money", "number"):
                 continue
             computed = sum(
-                (Decimal(str(by_row[r].get(name))) for r in total.scope_rows if r in by_row and by_row[r].get(name) is not None),
+                (_row_amount(by_row[r], name) for r in total.scope_rows if r in by_row),
                 Decimal("0"),
             )
             diff = Decimal(str(reported.value)) - computed
@@ -146,3 +148,15 @@ def check_tie_out(rows: list[CleanRow], totals: list[ReportedTotal]) -> list[Iss
                                     f"'{total.label}' {name} = {reported.value} ties out to its {len(total.scope_rows)} rows.",
                                     total.row, name))
     return issues
+
+
+def _row_amount(row: CleanRow, name: str) -> Decimal:
+    """A row's contribution to a reported total. Charge-line totals add every line.
+
+    Uses reviewer-corrected values: when a cell was misread, correcting it is
+    exactly what should make the total tie out.
+    """
+    if name == "charge_amount":
+        return sum((ch.amount.value for ch in row.charges if ch.amount.value is not None), Decimal("0"))
+    value = row.get(name)
+    return Decimal(str(value)) if value is not None else Decimal("0")

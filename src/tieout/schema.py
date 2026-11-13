@@ -26,6 +26,7 @@ class FieldSpec:
     synonyms: tuple[str, ...]
     required: bool = False
     description: str = ""
+    output: bool = True  # False for input-only fields (charge lines are rolled up per unit)
 
 
 RENT_ROLL_FIELDS: tuple[FieldSpec, ...] = (
@@ -76,13 +77,44 @@ RENT_ROLL_FIELDS: tuple[FieldSpec, ...] = (
             "lease rent",
             "contract rent",
             "monthly rent",
-            "charge amount",
             "base rent",
             "in place rent",
             "effective rent",
         ),
         required=True,
         description="Rent actually charged per month",
+    ),
+    FieldSpec(
+        "concessions",
+        FieldType.MONEY,
+        ("concessions", "concession", "monthly concession", "discount", "rent concession"),
+        description="Monthly concessions or discounts (usually negative)",
+    ),
+    FieldSpec(
+        "other_charges",
+        FieldType.MONEY,
+        ("other charges", "other", "other income", "fees", "additional charges", "misc charges"),
+        description="Recurring non-rent charges (parking, pet, storage, utilities)",
+    ),
+    FieldSpec(
+        "total_charges",
+        FieldType.MONEY,
+        ("total charges", "total monthly charges", "total billed", "gross charges"),
+        description="All recurring monthly charges for the unit",
+    ),
+    FieldSpec(
+        "charge_code",
+        FieldType.TEXT,
+        ("charge code", "charge", "code", "charge type", "charge desc", "charge description", "lease charges"),
+        description="Charge line code (one unit may have several lines)",
+        output=False,
+    ),
+    FieldSpec(
+        "charge_amount",
+        FieldType.MONEY,
+        ("charge amount", "amount", "charges", "monthly amount", "charge amt"),
+        description="Amount of one charge line",
+        output=False,
     ),
     FieldSpec(
         "deposit",
@@ -111,5 +143,12 @@ RENT_ROLL_FIELDS: tuple[FieldSpec, ...] = (
 )
 
 FIELDS_BY_NAME: dict[str, FieldSpec] = {f.name: f for f in RENT_ROLL_FIELDS}
+OUTPUT_FIELDS: tuple[str, ...] = tuple(f.name for f in RENT_ROLL_FIELDS if f.output)
+
+# Charge codes vary by system ("RENT", "RNT", "BASERENT", "CONC", "PARK", "PET").
+# Classify them into rent, concession or other so per-line charges roll up into
+# current_rent, concessions and other_charges.
+RENT_CODE_RE = r"^(rent|rnt|rentr|rentres|base\s*rent|baserent|res\s*rent|apt\s*rent|mrent|market\s*rent|resident\s*rent)\b|^rent"
+CONCESSION_CODE_RE = r"conc|concession|disc(ount)?\b|special|promo|free\s*rent|credit"
 
 STATUS_VALUES = ("occupied", "vacant", "notice", "model", "down")
