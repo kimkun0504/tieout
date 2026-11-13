@@ -88,8 +88,7 @@ def clean_file(
             all_data.append(row.source_row)
         elif cr.kind is RowKind.TOTAL:
             label = cr.label or "Total"
-            grand = any(w in label.lower() for w in _GRAND_WORDS) or (bool(totals) and not since_last_total)
-            scope = list(all_data) if grand else list(since_last_total)
+            scope = _total_scope(label, totals, since_last_total, all_data)
             totals.append(ReportedTotal(cr.index + 1, label, cr.section, scope, _total_amounts(grid, cr.index, col_for)))
             since_last_total = []
         else:
@@ -97,6 +96,27 @@ def clean_file(
 
     issues = validate.run_all(rows, totals, mappings, as_of)
     return CleanResult(grid.file, grid.sheet, header, mappings, rows, totals, issues, skipped)
+
+
+def _total_scope(label: str, previous: list[ReportedTotal], since_last: list[int], all_data: list[int]) -> list[int]:
+    """Which data rows a total row should add up.
+
+    - "Grand Total", "Property Total": every data row.
+    - New data since the last total: a subtotal of those rows.
+    - Right after two or more subtotals: a total of all of them.
+    - Right after a single total: a second line of that same total
+      (e.g. one row for rent, another for charges), so the same rows.
+    """
+    if any(w in label.lower() for w in _GRAND_WORDS):
+        return list(all_data)
+    if since_last:
+        return list(since_last)
+    if not previous:
+        return []
+    subtotals = [t for t in previous if set(t.scope_rows) != set(all_data)]
+    if len(subtotals) >= 2:
+        return list(all_data)
+    return list(previous[-1].scope_rows)
 
 
 def _build_row(grid: Grid, r: int, section: str | None, col_for: dict[str, int]) -> CleanRow:

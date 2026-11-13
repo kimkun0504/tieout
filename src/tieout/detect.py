@@ -96,7 +96,24 @@ def detect_header(grid: Grid) -> HeaderInfo:
     return best
 
 
+_NOISE_RE = re.compile(
+    r"^(page\s*\d+(\s*(of|/)\s*\d+)?|\(?cont(inued|'d|\.)?\)?|printed\b.*|run\s+(date|on)\b.*|"
+    r"report\s+(date|run)\b.*|as\s+of\b.*|confidential\b.*|\*+.*|note:.*)$",
+    re.I,
+)
+
+
+def _is_noise(v: Any) -> bool:
+    """Page numbers, run dates and footnotes that sit alone on a row."""
+    if isinstance(v, (int, float)) or hasattr(v, "year"):
+        return True  # a lone number or date is a page number or a printed date
+    return bool(_NOISE_RE.match(_text(v)))
+
+
 def classify_rows(grid: Grid, header: HeaderInfo, unit_col: int | None) -> list[ClassifiedRow]:
+    """Label each row below the header. Order matters:
+    blank -> repeated header -> total -> lone cell (section / noise) -> no unit -> data.
+    """
     start = max(header.header_rows) + 1
     header_norm = {c: norm_header(t) for c, t in header.headers.items()}
     out: list[ClassifiedRow] = []
@@ -108,29 +125,36 @@ def classify_rows(grid: Grid, header: HeaderInfo, unit_col: int | None) -> list[
         if not filled:
             out.append(ClassifiedRow(r, RowKind.BLANK, section))
             continue
-
         texts = [_text(v) for _, v in filled]
-        if any(_TOTAL_RE.search(t) for t in texts if not _is_number_like(t)):
-            out.append(ClassifiedRow(r, RowKind.TOTAL, section, label=next(t for t in texts if _TOTAL_RE.search(t))))
-            continue
+        unit_text = _text(grid.value(r, unit_col)) if unit_col is not None else ""
 
+        # A repeated page header can contain words like "Total Charges", so it is
+        # recognised before totals (finding 4).
         same_as_header = sum(1 for c, v in filled if header_norm.get(c) and norm_header(v) == header_norm[c])
-        if same_as_header >= max(2, len(filled) // 2):
+        if same_as_header >= max(2, (len(filled) + 1) // 2):
             out.append(ClassifiedRow(r, RowKind.REPEATED_HEADER, section))
             continue
 
-        # A row with one lonely text cell is a section label ("Building A") or a footnote,
-        # even when it sits in the unit column. Exception: a bare unit code like "104B".
+        # A total label never sits next to a real unit code. "Total Wine & More" in
+        # the tenant column of unit 101 is a tenant, not a total (finding 3).
+        if not (unit_text and _looks_like_unit_code(unit_text) and not _TOTAL_RE.search(unit_text)):
+            label = next((t for t in texts if not _is_number_like(t) and _TOTAL_RE.search(t)), None)
+            if label is not None:
+                out.append(ClassifiedRow(r, RowKind.TOTAL, section, label=label))
+                continue
+
         if len(filled) == 1 and not (filled[0][0] == unit_col and _looks_like_unit_code(texts[0])):
-            t = texts[0]
-            if len(t) <= 60:
-                section = t
-                out.append(ClassifiedRow(r, RowKind.SECTION, section, label=t))
+            v = filled[0][1]
+            if _is_noise(v) or len(texts[0]) > 60:
+                # Page numbers and footnotes must not start a new section, or
+                # duplicates across a page break would go unnoticed (finding 12).
+                out.append(ClassifiedRow(r, RowKind.NOTE, section, label=texts[0]))
             else:
-                out.append(ClassifiedRow(r, RowKind.NOTE, section, label=t))
+                section = texts[0]
+                out.append(ClassifiedRow(r, RowKind.SECTION, section, label=section))
             continue
 
-        if unit_col is not None and not _text(grid.value(r, unit_col)):
+        if unit_col is not None and not unit_text:
             out.append(ClassifiedRow(r, RowKind.NOTE, section, label=" | ".join(texts)[:120]))
             continue
 

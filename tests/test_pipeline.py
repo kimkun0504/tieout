@@ -189,3 +189,43 @@ def test_csv_quoted_field_keeps_its_line_break(tmp_path):
     r = clean_file(path)
     assert [x.get("unit") for x in r.rows] == ["101", "102"]
     assert r.rows[0].get("tenant") == "Lee, Jordan c/o Jane Lee"  # whitespace collapsed, words kept apart
+
+
+def test_tenant_named_total_stays_a_unit(tmp_path):
+    """Finding 3: 'Total Wine & More' deleted unit 101 and became a fake subtotal."""
+    path = _xlsx(tmp_path, [["Unit", "Tenant", "Rent"], ["101", "Total Wine & More", 5000], ["102", "Acme", 3000], ["Total", None, 8000]])
+    r = clean_file(path)
+    assert [x.get("unit") for x in r.rows] == ["101", "102"]
+    assert [t.label for t in r.totals] == ["Total"]
+    assert r.ok
+
+
+def test_repeated_header_with_total_column_is_not_a_subtotal(tmp_path):
+    """Finding 4: 'Total Charges' in a repeated header reset the subtotal scope."""
+    h = ["Unit", "Tenant", "Rent", "Total Charges"]
+    path = _xlsx(tmp_path, [h, ["101", "A", 1000, 1000], h, ["102", "B", 2000, 2000], ["Total", None, 3000, 3000]])
+    r = clean_file(path)
+    assert r.skipped.get("repeated_header") == 1
+    assert len(r.totals) == 1 and len(r.totals[0].scope_rows) == 2
+    assert r.ok
+
+
+def test_page_footer_does_not_hide_duplicates(tmp_path):
+    """Finding 12: 'Page 2 of 2' became a section, so duplicates across pages were missed."""
+    path = _xlsx(tmp_path, [["Unit", "Tenant", "Rent"], ["101", "A", 1000], ["Page 2 of 2"], ["101", "A", 1000]])
+    r = clean_file(path)
+    assert {x.section for x in r.rows} == {None}
+    assert "duplicate_unit" in rules(r, Severity.ERROR)
+
+
+def test_second_total_line_reuses_the_same_rows(tmp_path):
+    """Two consecutive total rows for one group (rent line, then deposit line)."""
+    path = _xlsx(tmp_path, [
+        ["Unit", "Tenant", "Rent", "Deposit"],
+        ["101", "A", 1000, 500], ["102", "B", 2000, 700],
+        ["Total", None, 3000, None],
+        ["Total", None, None, 1200],
+    ])
+    r = clean_file(path)
+    assert [len(t.scope_rows) for t in r.totals] == [2, 2]
+    assert r.ok
