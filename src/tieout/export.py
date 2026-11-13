@@ -440,7 +440,11 @@ def unit_text(row: Any, redact: bool) -> str:
     status = g("status") or "status unknown"
     tenant = g("tenant")
     who = f", leased to {tenant}" if tenant and not redact else (", leased" if tenant else "")
-    parts = [f"{head} is {status}{who}."]
+    if status == "future":
+        signer = f" with {tenant}" if tenant and not redact else ""
+        parts = [f"{head} has a future lease{signer} that has not started yet."]
+    else:
+        parts = [f"{head} is {status}{who}."]
     if g("current_rent") is not None:
         rent = f"Rent is {_money_words(g('current_rent'))} per month"
         if g("market_rent") is not None:

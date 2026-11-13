@@ -73,3 +73,11 @@ def test_reviewer_correction_beats_the_section():
     r = _run(CURRENT, FUTURE, review=review)
     assert r.summary()["units"] == 4 and r.rows[-1].get("status") == "occupied"
     assert r.rows[-1].get("current_rent") == Decimal("1800.00")
+
+
+def test_future_lease_reads_naturally_for_ai_records():
+    from tieout.export import unit_text
+
+    row = _run(CURRENT, FUTURE).rows[-1]
+    assert "has a future lease with Kim that has not started yet." in unit_text(row, False)
+    assert "Kim" not in unit_text(row, True)
