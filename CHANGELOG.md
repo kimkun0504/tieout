@@ -16,7 +16,8 @@ All notable changes to tieout. The format follows [Keep a Changelog](https://kee
 - Future and applicant lease rows ("Future Residents/Applicants") get status `future`: kept in the output, left out of unit counts, occupancy, rent and duplicate checks.
 - Commercial rent rolls: rent per square foot (annual, or monthly converted ×12) is checked against area × rent. Rates are never tied out as sums.
 - Unit codes spelled differently ("101", "Apt 101", "0101") are flagged as possible duplicates.
-- Excel's accounting dash ("$ -") reads as empty, like "-".
+- Excel's accounting dash ("$ -") reads as empty, like "-". "Pending Move-Out" reads as notice.
+- Every value tieout works out itself carries a plain-words note (shown in the inspector and the JSON).
 - Cross-checks: annual vs monthly rent, rent column vs rent charge lines, rent per square foot outliers within a unit type.
 
 ### T-12 operating statements
@@ -28,6 +29,8 @@ All notable changes to tieout. The format follows [Keep a Changelog](https://kee
 ### Outputs
 - Clean CSV, JSON with provenance, Excel workbook, issues CSV, Markdown report, JSONL records for AI (optionally without tenant names).
 - A Frictionless Data Package (`*.datapackage.json`) describes both CSVs with types.
+- "Everything (zip)" download with every output; the Excel workbook gains a Fields sheet.
+- Downloads keep non-Latin file names (RFC 6266); previously such names caused a server error.
 - All text files are UTF-8; JSON and JSONL keep non-ASCII characters readable.
 - CSV and Excel outputs are safe from formula injection.
 
