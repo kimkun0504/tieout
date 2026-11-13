@@ -294,12 +294,12 @@ def create_app(data_dir: str | Path = "tieout-data", allowed_hosts: list[str] | 
     # --- exports -----------------------------------------------------------------------
 
     media = {
-        "csv": ("text/csv", ".clean.csv"),
+        "csv": ("text/csv; charset=utf-8", ".clean.csv"),
         "xlsx": ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".clean.xlsx"),
         "json": ("application/json", ".clean.json"),
-        "issues": ("text/csv", ".issues.csv"),
-        "report": ("text/markdown", ".report.md"),
-        "jsonl": ("application/x-ndjson", ".records.jsonl"),
+        "issues": ("text/csv; charset=utf-8", ".issues.csv"),
+        "report": ("text/markdown; charset=utf-8", ".report.md"),
+        "jsonl": ("application/x-ndjson; charset=utf-8", ".records.jsonl"),
     }
 
     @app.get("/api/jobs/{job_id}/export/{fmt}")

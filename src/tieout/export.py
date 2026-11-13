@@ -128,7 +128,7 @@ def _computed_total(result: CleanResult, scope: list[int], name: str) -> str:
 
 
 def write_json(result: CleanResult, path: Path) -> None:
-    path.write_text(json.dumps(to_payload(result), indent=2, default=str), encoding="utf-8")
+    path.write_text(json.dumps(to_payload(result), indent=2, default=str, ensure_ascii=False), encoding="utf-8")
 
 
 def write_issues(result: CleanResult, path: Path) -> None:
@@ -403,7 +403,7 @@ def to_jsonl_records(result: CleanResult, redact_tenants: bool = False) -> list[
 def write_jsonl(result: CleanResult, path: Path, redact_tenants: bool = False) -> None:
     with path.open("w", encoding="utf-8") as f:
         for rec in to_jsonl_records(result, redact_tenants):
-            f.write(json.dumps(rec, default=str) + "\n")
+            f.write(json.dumps(rec, default=str, ensure_ascii=False) + "\n")
 
 
 def _text_never_formula(wb: Workbook) -> None:

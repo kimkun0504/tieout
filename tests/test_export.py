@@ -112,6 +112,7 @@ def test_outputs_are_utf8_whatever_the_platform_default(tmp_path):
     rows = [["Unit", "Tenant", "Rent"], ["101", "Zoë Ångström", 1200], ["102", "李小龍", 1300]]
     result = clean_file("x.csv", grid=Grid("x.csv", "x", rows))
     paths = write_all(result, tmp_path)
-    for key in ("csv", "report", "jsonl"):
-        text = paths[key].read_bytes().decode("utf-8")  # raises if written in a legacy code page
-        assert "Ångström" in text or "\\u00c5ngstr" in text
+    for key in ("csv", "report", "jsonl", "json"):
+        paths[key].read_bytes().decode("utf-8")  # raises if written in a legacy code page
+    assert "李小龍" in paths["csv"].read_text(encoding="utf-8")
+    assert "Zoë Ångström" in paths["jsonl"].read_text(encoding="utf-8")
