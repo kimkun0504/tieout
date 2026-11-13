@@ -36,6 +36,7 @@ class TracedValue:
     correction: Correction | None = None
     original: Any = None
     sources: list[SourceRef] = dc_field(default_factory=list)  # extra cells for rolled-up values
+    note: str | None = None  # for derived values: how tieout worked it out, in plain words
 
     def to_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {
@@ -48,6 +49,8 @@ class TracedValue:
             out["sources"] = [s.to_dict() for s in self.sources]
         if self.issue:
             out["issue"] = self.issue
+        if self.note:
+            out["note"] = self.note
         if self.correction:
             out["original"] = jsonable(self.original)
             out["correction"] = self.correction.to_dict()

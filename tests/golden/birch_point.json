@@ -408,6 +408,7 @@
       "fields": {
         "current_rent": {
           "derived": true,
+          "note": "Sum of this unit's rent charge lines.",
           "raw": null,
           "source": {
             "cell": "H4",
@@ -465,6 +466,7 @@
         },
         "other_charges": {
           "derived": true,
+          "note": "Sum of this unit's other (non-rent) charge lines.",
           "raw": null,
           "source": {
             "cell": "H5",
@@ -529,6 +531,7 @@
         },
         "total_charges": {
           "derived": true,
+          "note": "Sum of all of this unit's charge lines.",
           "raw": null,
           "source": {
             "cell": "H4",
@@ -650,6 +653,7 @@
       "fields": {
         "concessions": {
           "derived": true,
+          "note": "Sum of this unit's concession charge lines.",
           "raw": null,
           "source": {
             "cell": "H8",
@@ -671,6 +675,7 @@
         },
         "current_rent": {
           "derived": true,
+          "note": "Sum of this unit's rent charge lines.",
           "raw": null,
           "source": {
             "cell": "H7",
@@ -764,6 +769,7 @@
         },
         "total_charges": {
           "derived": true,
+          "note": "Sum of all of this unit's charge lines.",
           "raw": null,
           "source": {
             "cell": "H7",
@@ -954,6 +960,7 @@
       "fields": {
         "current_rent": {
           "derived": true,
+          "note": "Sum of this unit's rent charge lines.",
           "raw": null,
           "source": {
             "cell": "H10",
@@ -1047,6 +1054,7 @@
         },
         "total_charges": {
           "derived": true,
+          "note": "Sum of all of this unit's charge lines.",
           "raw": null,
           "source": {
             "cell": "H10",

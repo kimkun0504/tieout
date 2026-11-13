@@ -81,3 +81,8 @@ def test_future_lease_reads_naturally_for_ai_records():
     row = _run(CURRENT, FUTURE).rows[-1]
     assert "has a future lease with Kim that has not started yet." in unit_text(row, False)
     assert "Kim" not in unit_text(row, True)
+
+
+def test_derived_status_explains_itself():
+    row = _run(CURRENT, FUTURE).rows[-1]
+    assert row.values["status"].to_dict()["note"].startswith('Listed under "Future Residents/Applicants"')

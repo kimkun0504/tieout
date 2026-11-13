@@ -176,7 +176,7 @@ function Provenance({
       )}
       {tv.derived && !tv.correction && (
         <p className="text-ink-2">
-          {cells.length > 1 ? `Added up from ${cells.length} cells.` : "Worked out by tieout, not read directly."}
+          {tv.note ?? (cells.length > 1 ? `Added up from ${cells.length} cells.` : "Worked out by tieout, not read directly.")}
         </p>
       )}
       {cells.length > 0 && (

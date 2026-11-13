@@ -373,7 +373,20 @@ def _roll_up_charges(row: CleanRow, col_for: dict[str, int]) -> None:
     def put(name: str, amount: Decimal, srcs: list[Any]) -> None:
         if name in col_for:
             return
-        row.values[name] = TracedValue(amount, None, srcs[0] if srcs else None, derived=True, issue=issue, sources=srcs)
+        row.values[name] = TracedValue(
+            amount,
+            None,
+            srcs[0] if srcs else None,
+            derived=True,
+            issue=issue,
+            sources=srcs,
+            note={
+                "current_rent": "Sum of this unit's rent charge lines.",
+                "concessions": "Sum of this unit's concession charge lines.",
+                "other_charges": "Sum of this unit's other (non-rent) charge lines.",
+                "total_charges": "Sum of all of this unit's charge lines.",
+            }.get(name),
+        )
 
     if cells["rent"] or not any(cells.values()):
         put("current_rent", sums["rent"], cells["rent"])
@@ -397,7 +410,12 @@ def _derive_monthly_from_annual(row: CleanRow, col_for: dict[str, int]) -> None:
         return  # already rolled up from charge lines
     monthly = (annual.value / 12).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     row.values["current_rent"] = TracedValue(
-        monthly, None, annual.source, derived=True, sources=[annual.source] if annual.source else []
+        monthly,
+        None,
+        annual.source,
+        derived=True,
+        sources=[annual.source] if annual.source else [],
+        note="Annual rent divided by 12; the file has no monthly rent column.",
     )
 
 
@@ -410,6 +428,7 @@ def _derive_annual_psf(row: CleanRow) -> None:
         monthly.value * 12,
         monthly.raw,
         monthly.source,
+        note="Monthly rate per square foot x 12.",
         derived=True,
         sources=[monthly.source] if monthly.source else [],
     )
@@ -424,7 +443,9 @@ def _clean_tenant(row: CleanRow) -> None:
         tenant.value = None
         status = row.values.get("status")
         if status is None or (status.value is None and not status.issue):
-            row.values["status"] = TracedValue("vacant", tenant.raw, tenant.source, derived=True)
+            row.values["status"] = TracedValue(
+                "vacant", tenant.raw, tenant.source, derived=True, note="The tenant column says the unit is vacant."
+            )
     else:
         tenant.value = tidy_name(tenant.value)
 
@@ -461,6 +482,7 @@ def _mark_future_section(row: CleanRow) -> None:
         status.raw if status else None,
         status.source if status else None,
         derived=True,
+        note=f'Listed under "{row.section}", so read as a future lease rather than a current unit.',
         original=status.value if status else None,
     )
 
@@ -475,11 +497,25 @@ def _infer_status(row: CleanRow, has_tenant_column: bool) -> TracedValue:
     """Status when the file doesn't state it. Never assume vacancy from a missing column."""
     if has_tenant_column:
         tenant = row.values["tenant"]
-        return TracedValue("occupied" if row.get("tenant") else "vacant", None, tenant.source, derived=True)
+        has = bool(row.get("tenant"))
+        return TracedValue(
+            "occupied" if has else "vacant",
+            None,
+            tenant.source,
+            derived=True,
+            note=f"No status column: {'a tenant is named' if has else 'no tenant is named'}, so the unit reads as "
+            f"{'occupied' if has else 'vacant'}.",
+        )
     rent = row.values.get("current_rent")
     if rent is not None and rent.value is not None:
         # No tenant or status column: charged rent is the only evidence of occupancy.
-        return TracedValue("occupied" if rent.value > 0 else "vacant", None, rent.source, derived=True)
+        return TracedValue(
+            "occupied" if rent.value > 0 else "vacant",
+            None,
+            rent.source,
+            derived=True,
+            note="No status or tenant column: rent charged is the only evidence of occupancy.",
+        )
     return TracedValue(None, None, None, derived=True)
 
 

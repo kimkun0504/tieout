@@ -36,6 +36,7 @@ export interface TracedValue {
   sources?: SourceRef[];
   derived: boolean;
   issue?: string;
+  note?: string;
   original?: Scalar;
   correction?: Correction;
 }

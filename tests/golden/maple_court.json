@@ -555,6 +555,7 @@
         },
         "status": {
           "derived": true,
+          "note": "No status column: a tenant is named, so the unit reads as occupied.",
           "raw": null,
           "source": {
             "cell": "D8",
@@ -694,6 +695,7 @@
         },
         "status": {
           "derived": true,
+          "note": "The tenant column says the unit is vacant.",
           "raw": "VACANT",
           "source": {
             "cell": "D9",
@@ -833,6 +835,7 @@
         },
         "status": {
           "derived": true,
+          "note": "No status column: a tenant is named, so the unit reads as occupied.",
           "raw": null,
           "source": {
             "cell": "D10",
@@ -972,6 +975,7 @@
         },
         "status": {
           "derived": true,
+          "note": "No status column: a tenant is named, so the unit reads as occupied.",
           "raw": null,
           "source": {
             "cell": "D14",
@@ -1111,6 +1115,7 @@
         },
         "status": {
           "derived": true,
+          "note": "No status column: a tenant is named, so the unit reads as occupied.",
           "raw": null,
           "source": {
             "cell": "D15",
