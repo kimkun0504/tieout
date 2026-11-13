@@ -98,6 +98,7 @@ const RULES: Record<string, string> = {
   total_not_checkable: "Total can't be checked",
   duplicate_unit: "Duplicate unit",
   possible_duplicate_unit: "Possible duplicate unit",
+  future_leases: "Future leases set apart",
   lease_dates_reversed: "Lease ends before it starts",
   vacant_with_rent: "Vacant unit with rent",
   occupied_without_tenant: "Occupied, no tenant",

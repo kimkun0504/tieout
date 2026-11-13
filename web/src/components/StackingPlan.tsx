@@ -36,7 +36,9 @@ export function StackingPlan({
   const problems = useMemo(() => issuesByRow(result), [result]);
   const sections = useMemo(() => {
     const map = new Map<string, Row[]>();
+    // Future/applicant lease rows repeat a unit shown elsewhere; the plan shows each unit once.
     for (const r of result.rows) {
+      if (r.fields.status?.value === "future") continue;
       const key = r.section ?? "";
       map.set(key, [...(map.get(key) ?? []), r]);
     }
@@ -49,8 +51,9 @@ export function StackingPlan({
       <div className="flex items-baseline gap-3 border-b border-rule-soft px-4 py-2.5">
         <h2 className="text-sm font-semibold">Stacking plan</h2>
         <p className="text-sm text-ink-3">
-          {result.rows.length} units, {fmtPct(result.summary.physical_occupancy)} occupied
+          {result.summary.units} units, {fmtPct(result.summary.physical_occupancy)} occupied
           {flagged > 0 && `, ${flagged} with problems`}
+          {(result.summary.future_leases ?? 0) > 0 && `, ${result.summary.future_leases} future leases not shown`}
         </p>
       </div>
       <div className="max-h-80 space-y-3 overflow-y-auto px-4 py-3">

@@ -56,9 +56,11 @@ def run_all(
     issues: list[Issue] = []
     issues += check_mapping(mappings)
     issues += check_parse_issues(rows)
-    issues += check_duplicates(rows)
+    current = [r for r in rows if r.current]
+    future = [r for r in rows if not r.current]
+    issues += check_duplicates(current) + check_duplicates(future)  # a future lease repeats its unit
     issues += check_row_rules(rows, as_of)
-    issues += check_outliers(rows)
+    issues += check_outliers(current)
     issues += check_cross_fields(rows)
     issues += check_tie_out(rows, totals)
     order = {Severity.ERROR: 0, Severity.WARNING: 1, Severity.INFO: 2}
@@ -492,6 +494,7 @@ def check_stated_figures(rows: list[CleanRow], stated: list[StatedFigure]) -> li
     issues: list[Issue] = []
     if not stated:
         return issues
+    rows = [r for r in rows if r.current]
     counts: dict[str, int] = {}
     for r in rows:
         s = r.get("status") or "unknown"

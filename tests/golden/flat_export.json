@@ -23,7 +23,7 @@
       "type": "text"
     },
     {
-      "description": "occupied / vacant / notice / model / down",
+      "description": "occupied / vacant / notice / model / down / future (a lease not yet started)",
       "name": "status",
       "type": "status"
     },
@@ -1045,6 +1045,7 @@
     "acknowledged": 0,
     "corrections": 0,
     "errors": 3,
+    "future_leases": 0,
     "physical_occupancy": 0.8,
     "status_counts": {
       "notice": 1,

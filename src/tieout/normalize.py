@@ -196,7 +196,9 @@ def parse_status(value: Any) -> Parsed:
     if ("ntv" in words or "notice" in words) and "no notice" not in s:
         return "notice", None
     if s.startswith(_VACANT_PREFIXES):
-        return "vacant", None
+        return "vacant", None  # includes "Vacant-Leased": empty today, with a future lease
+    if s.startswith(("future", "applicant", "pending", "approved", "pre leased", "preleased", "pre lease")):
+        return "future", None  # a lease that hasn't started: not a unit of its own
     if s.startswith(("occ", "current", "leased", "rented", "in place")):
         return "occupied", None
     if s.startswith("model"):

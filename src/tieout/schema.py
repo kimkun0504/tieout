@@ -60,7 +60,7 @@ RENT_ROLL_FIELDS: tuple[FieldSpec, ...] = (
         "status",
         FieldType.STATUS,
         ("status", "unit status", "occupancy", "occupancy status", "occ status"),
-        description="occupied / vacant / notice / model / down",
+        description="occupied / vacant / notice / model / down / future (a lease not yet started)",
     ),
     FieldSpec(
         "market_rent",
@@ -220,4 +220,7 @@ RENT_CODE_RE = (
 )
 CONCESSION_CODE_RE = r"conc|concession|disc(ount)?\b|special|promo|free\s*rent|credit"
 
-STATUS_VALUES = ("occupied", "vacant", "notice", "model", "down")
+STATUS_VALUES = ("occupied", "vacant", "notice", "model", "down", "future")
+# "future" marks a signed or pending lease row for a unit that is listed again as its current
+# occupant (Yardi's "Future Residents/Applicants" section). It is kept in the output but is not
+# a unit: unit counts, occupancy, rent and duplicate checks use current rows only.

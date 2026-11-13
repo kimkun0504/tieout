@@ -73,6 +73,11 @@ class CleanRow:
     values: dict[str, TracedValue] = dc_field(default_factory=dict)
     charges: list[Charge] = dc_field(default_factory=list)
 
+    @property
+    def current(self) -> bool:
+        """False for a future/applicant lease row, which repeats a unit listed elsewhere."""
+        return bool(self.get("status") != "future")
+
     def get(self, name: str) -> Any:
         tv = self.values.get(name)
         return tv.value if tv else None

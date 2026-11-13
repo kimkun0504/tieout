@@ -101,6 +101,7 @@ export interface Summary {
   warnings: number;
   acknowledged: number;
   corrections: number;
+  future_leases?: number;
 }
 
 export interface UnitMix {

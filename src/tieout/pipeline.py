@@ -57,16 +57,22 @@ class CleanResult:
         """True when no error-level issue is left open."""
         return not any(i.severity is Severity.ERROR for i in self.open_issues)
 
+    @property
+    def units(self) -> list[CleanRow]:
+        """Unit rows, without future/applicant lease rows (those repeat a unit listed elsewhere)."""
+        return [r for r in self.rows if r.current]
+
     def summary(self) -> dict[str, Any]:
-        units = len(self.rows)
+        current = self.units
+        units = len(current)
         status_counts: dict[str, int] = {}
-        for r in self.rows:
+        for r in current:
             s = r.get("status") or "unknown"
             status_counts[s] = status_counts.get(s, 0) + 1
         occupied = status_counts.get("occupied", 0) + status_counts.get("notice", 0)
-        rent = sum((r.get("current_rent") or Decimal(0) for r in self.rows), Decimal(0))
-        market = sum((r.get("market_rent") or Decimal(0) for r in self.rows), Decimal(0))
-        sqft = sum((r.get("sqft") or 0 for r in self.rows), 0)
+        rent = sum((r.get("current_rent") or Decimal(0) for r in current), Decimal(0))
+        market = sum((r.get("market_rent") or Decimal(0) for r in current), Decimal(0))
+        sqft = sum((r.get("sqft") or 0 for r in current), 0)
         open_ = self.open_issues
         return {
             "units": units,
@@ -79,10 +85,11 @@ class CleanResult:
             "warnings": sum(1 for i in open_ if i.severity is Severity.WARNING),
             "acknowledged": sum(1 for i in self.issues if not i.open),
             "corrections": len(self.review.corrections),
+            "future_leases": len(self.rows) - units,
         }
 
     def metrics(self) -> dict[str, Any]:
-        return compute_metrics(self.rows, self.as_of)
+        return compute_metrics(self.units, self.as_of)
 
 
 def clean_file(
@@ -156,6 +163,7 @@ def clean_file(
         _clean_tenant(row)
         _apply_corrections(row, review)
         _ensure_status(row, "tenant" in col_for)
+        _mark_future_section(row)
     for c in review.corrections:
         if c.source_row not in by_source_row:
             extra_issues.append(
@@ -168,6 +176,17 @@ def clean_file(
                 )
             )
 
+    future = [r for r in rows if not r.current]
+    if future:
+        extra_issues.append(
+            Issue(
+                Severity.INFO,
+                "future_leases",
+                f"{len(future)} future or applicant lease row{'s' if len(future) != 1 else ''} "
+                f"(rows {', '.join(str(r.source_row) for r in future[:10])}{'...' if len(future) > 10 else ''}) "
+                "kept in the output with status 'future' but not counted as units, in occupancy or in rent.",
+            )
+        )
     if report_date and as_of and as_of != report_date.value:
         extra_issues.append(
             Issue(
@@ -425,6 +444,25 @@ def _apply_corrections(row: CleanRow, review: Review) -> None:
             original=current.value if current else None,
             sources=current.sources if current else [],
         )
+
+
+_FUTURE_SECTION = re.compile(r"\b(future|applicants?|pending|pre-?leased?|upcoming|approved)\b", re.I)
+
+
+def _mark_future_section(row: CleanRow) -> None:
+    """Rows under a "Future Residents/Applicants" heading are future leases, whatever their status cell says."""
+    if not (row.section and _FUTURE_SECTION.search(row.section)) or row.get("status") == "future":
+        return
+    status = row.values.get("status")
+    if status is not None and status.correction is not None:
+        return  # a reviewer decided
+    row.values["status"] = TracedValue(
+        "future",
+        status.raw if status else None,
+        status.source if status else None,
+        derived=True,
+        original=status.value if status else None,
+    )
 
 
 def _ensure_status(row: CleanRow, has_tenant_column: bool) -> None:
