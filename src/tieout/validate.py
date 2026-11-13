@@ -14,6 +14,27 @@ from tieout.mapping import ColumnMapping
 from tieout.models import CleanRow, Issue, ReportedTotal, Severity
 from tieout.schema import FIELDS_BY_NAME
 
+_LABELS = {"current_rent": "rent", "sqft": "sq ft", "charge_amount": "charges", "market_rent": "market rent"}
+
+
+def label(name: str | None) -> str:
+    """Field name as a reviewer would say it: current_rent -> 'rent'."""
+    if name is None:
+        return ""
+    return _LABELS.get(name, name.replace("_", " "))
+
+
+def show(value: object) -> str:
+    """Amounts with thousands separators; dates as 'May 31, 2026'."""
+    if isinstance(value, Decimal):
+        return f"{value:,.2f}"
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return f"{value:,}"
+    if isinstance(value, date):
+        return f"{value:%b} {value.day}, {value.year}"
+    return str(value)
+
+
 TIE_OUT_TOLERANCE = Decimal("0.01")
 RENT_DEVIATION_LIMIT = Decimal("0.40")  # flag rent more than 40% away from market
 
@@ -43,7 +64,11 @@ def check_mapping(mappings: list[ColumnMapping]) -> list[Issue]:
     for spec in FIELDS_BY_NAME.values():
         if spec.required and spec.name not in mapped:
             issues.append(
-                Issue(Severity.ERROR, "required_column_missing", f"No column found for required field '{spec.name}'.")
+                Issue(
+                    Severity.ERROR,
+                    "required_column_missing",
+                    f"No column found for {label(spec.name)}, which is required.",
+                )
             )
     if "status" not in mapped:
         source = "tenant names" if "tenant" in mapped else "rent amounts" if "current_rent" in mapped else None
@@ -59,8 +84,8 @@ def check_mapping(mappings: list[ColumnMapping]) -> list[Issue]:
                 Issue(
                     Severity.INFO,
                     "low_confidence_mapping",
-                    f"Column '{m.header}' mapped to '{m.field}' with confidence {m.confidence:.2f} "
-                    f"({m.method}); please confirm.",
+                    f"Column '{m.header}' is read as {label(m.field)}, but only with confidence {m.confidence:.0%} "
+                    "; please confirm.",
                     field=m.field,
                 )
             )
@@ -80,7 +105,7 @@ def check_parse_issues(rows: list[CleanRow]) -> list[Issue]:
                     Issue(
                         Severity.WARNING,
                         "unparsed_value",
-                        f"{name}: {tv.issue}",
+                        f"{label(name).capitalize()}: {tv.issue}",
                         row.source_row,
                         name,
                         [tv.source] if tv.source else [],
@@ -130,7 +155,7 @@ def check_row_rules(rows: list[CleanRow], as_of: date | None) -> list[Issue]:
                 Issue(
                     Severity.WARNING,
                     "vacant_with_rent",
-                    f"Unit {unit} is vacant but shows rent {rent}.",
+                    f"Unit {unit} is vacant but shows rent of {show(rent)}.",
                     r,
                     "current_rent",
                 )
@@ -157,14 +182,20 @@ def check_row_rules(rows: list[CleanRow], as_of: date | None) -> list[Issue]:
             )
         if rent is not None and rent < 0:
             issues.append(
-                Issue(Severity.ERROR, "negative_rent", f"Unit {unit} has negative rent {rent}.", r, "current_rent")
+                Issue(
+                    Severity.ERROR,
+                    "negative_rent",
+                    f"Unit {unit} has negative rent of {show(rent)}.",
+                    r,
+                    "current_rent",
+                )
             )
         if start and end and end < start:
             issues.append(
                 Issue(
                     Severity.ERROR,
                     "lease_dates_reversed",
-                    f"Unit {unit}: lease ends {end} before it starts {start}.",
+                    f"Unit {unit}: lease ends {show(end)}, before it starts on {show(start)}.",
                     r,
                     "lease_end",
                 )
@@ -176,7 +207,8 @@ def check_row_rules(rows: list[CleanRow], as_of: date | None) -> list[Issue]:
                     Issue(
                         Severity.WARNING,
                         "rent_far_from_market",
-                        f"Unit {unit}: rent {rent} is {deviation:.0%} away from market {market}.",
+                        f"Unit {unit}: rent of {show(rent)} is {deviation:.0%} away from "
+                        f"market rent of {show(market)}.",
                         r,
                         "current_rent",
                     )
@@ -186,7 +218,7 @@ def check_row_rules(rows: list[CleanRow], as_of: date | None) -> list[Issue]:
                 Issue(
                     Severity.INFO,
                     "lease_expired",
-                    f"Unit {unit}: lease ended {end} but unit is {status} (month-to-month?).",
+                    f"Unit {unit}: lease ended {show(end)} but the unit is {status} (month to month?).",
                     r,
                     "lease_end",
                 )
@@ -205,7 +237,7 @@ def check_tie_out(rows: list[CleanRow], totals: list[ReportedTotal]) -> list[Iss
                         Issue(
                             Severity.ERROR,
                             "total_not_checkable",
-                            f"'{total.label}' {name} could not be checked: {reported.issue}.",
+                            f"'{total.label}' {label(name)} could not be checked: {reported.issue}.",
                             total.row,
                             name,
                             [reported.source] if reported.source else [],
@@ -216,7 +248,7 @@ def check_tie_out(rows: list[CleanRow], totals: list[ReportedTotal]) -> list[Iss
             if spec is None or spec.type.value not in ("money", "number"):
                 continue
             computed = sum(
-                (_row_amount(by_row[r], name) for r in total.scope_rows if r in by_row),
+                (row_amount(by_row[r], name) for r in total.scope_rows if r in by_row),
                 Decimal("0"),
             )
             diff = Decimal(str(reported.value)) - computed
@@ -225,8 +257,9 @@ def check_tie_out(rows: list[CleanRow], totals: list[ReportedTotal]) -> list[Iss
                     Issue(
                         Severity.ERROR,
                         "total_does_not_tie_out",
-                        f"'{total.label}' reports {name} = {reported.value}, but the {len(total.scope_rows)} rows "
-                        f"it covers sum to {computed} (difference {diff}).",
+                        f"'{total.label}' reports {label(name)} of {show(reported.value)}, "
+                        f"but the {len(total.scope_rows)} units "
+                        f"it covers add up to {show(computed)} (difference {show(diff)}).",
                         total.row,
                         name,
                         [reported.source] if reported.source else [],
@@ -237,7 +270,8 @@ def check_tie_out(rows: list[CleanRow], totals: list[ReportedTotal]) -> list[Iss
                     Issue(
                         Severity.INFO,
                         "total_ties_out",
-                        f"'{total.label}' {name} = {reported.value} ties out to its {len(total.scope_rows)} rows.",
+                        f"'{total.label}' {label(name)} of {show(reported.value)} ties out "
+                        f"to its {len(total.scope_rows)} units.",
                         total.row,
                         name,
                     )
@@ -245,7 +279,7 @@ def check_tie_out(rows: list[CleanRow], totals: list[ReportedTotal]) -> list[Iss
     return issues
 
 
-def _row_amount(row: CleanRow, name: str) -> Decimal:
+def row_amount(row: CleanRow, name: str) -> Decimal:
     """A row's contribution to a reported total. Charge-line totals add every line.
 
     Uses reviewer-corrected values: when a cell was misread, correcting it is

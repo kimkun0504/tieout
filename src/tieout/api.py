@@ -161,7 +161,7 @@ def create_app(data_dir: str | Path = "tieout-data") -> FastAPI:
     def source(job_id: str) -> dict[str, Any]:
         """The raw sheet, so the UI can show every value in its original context."""
         meta = store.meta(job_id)
-        grid = read_grid(store.source_path(job_id), meta.sheet)
+        grid = read_grid(store.source_path(job_id), meta.sheet, meta.filename)
         rows = [[_cell_text(v) for v in row] for row in grid.rows[:MAX_SOURCE_ROWS]]
         return {
             "sheet": grid.sheet,

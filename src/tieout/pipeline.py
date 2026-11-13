@@ -89,9 +89,10 @@ def clean_file(
     mapper: HeaderMapper | None = None,
     as_of: date | None = None,
     review: Review | None = None,
+    source_name: str | None = None,
 ) -> CleanResult:
     review = review or Review()
-    grid = read_grid(path, sheet)
+    grid = read_grid(path, sheet, source_name)
     header = detect_header(grid)
 
     mappings = templates.load(header.headers) if templates else None

@@ -83,13 +83,25 @@ class UnsupportedFormat(ValueError):
 SUPPORTED_SUFFIXES = {".xlsx", ".xlsm", ".csv", ".tsv", ".txt"}
 
 
-def read_grid(path: str | Path, sheet: str | None = None) -> Grid:
+def read_grid(path: str | Path, sheet: str | None = None, name: str | None = None) -> Grid:
+    """Read a file. `name` is the display name used in provenance (defaults to the file's own name)."""
     path = Path(path)
     suffix = path.suffix.lower()
+    grid: Grid
     if suffix in {".xlsx", ".xlsm"}:
-        return _read_excel(path, sheet)
-    if suffix in {".csv", ".tsv", ".txt"}:
-        return _read_delimited(path)
+        grid = _read_excel(path, sheet)
+    elif suffix in {".csv", ".tsv", ".txt"}:
+        grid = _read_delimited(path)
+        if name:
+            grid.sheet = Path(name).stem
+    else:
+        grid = _unsupported(suffix)
+    if name:
+        grid.file = name
+    return grid
+
+
+def _unsupported(suffix: str) -> Grid:
     if suffix == ".pdf":
         raise UnsupportedFormat(
             "PDF input is not wired up yet. Planned: parse with Docling, then feed tables through this pipeline."

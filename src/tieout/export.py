@@ -17,6 +17,7 @@ from tieout import __version__
 from tieout.models import jsonable
 from tieout.pipeline import CleanResult
 from tieout.schema import FIELDS_BY_NAME, OUTPUT_FIELDS, FieldType
+from tieout.validate import row_amount
 
 COLUMNS = list(OUTPUT_FIELDS)
 
@@ -90,6 +91,7 @@ def to_payload(result: CleanResult) -> dict[str, Any]:
                 "section": t.section,
                 "covers_rows": t.scope_rows,
                 "amounts": {k: v.to_dict() for k, v in t.amounts.items()},
+                "computed": {k: _computed_total(result, t.scope_rows, k) for k in t.amounts},
             }
             for t in result.totals
         ],
@@ -97,6 +99,12 @@ def to_payload(result: CleanResult) -> dict[str, Any]:
         "skipped": result.skipped,
         "review": result.review.to_dict(),
     }
+
+
+def _computed_total(result: CleanResult, scope: list[int], name: str) -> str:
+    by_row = {r.source_row: r for r in result.rows}
+    total = sum((row_amount(by_row[r], name) for r in scope if r in by_row), Decimal(0))
+    return str(total)
 
 
 def write_json(result: CleanResult, path: Path) -> None:

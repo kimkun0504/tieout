@@ -14,3 +14,8 @@ out/
 data/private/
 *.local.xlsx
 examples/data/
+
+# web app: dependencies and build output (built in CI / Docker, served from the package)
+web/node_modules/
+src/tieout/web/
+*.tsbuildinfo

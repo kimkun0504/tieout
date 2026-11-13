@@ -144,3 +144,9 @@ def test_delete(client, flat_csv):
     job = upload(client, flat_csv).json()["job"]["id"]
     assert client.delete(f"/api/jobs/{job}").status_code == 204
     assert client.get(f"/api/jobs/{job}").status_code == 404
+
+
+def test_provenance_uses_the_uploaded_file_name(client, flat_csv):
+    result = upload(client, flat_csv).json()["result"]
+    assert result["source"] == {"file": "flat_export.csv", "sheet": "flat_export", "header_rows": [1]}
+    assert result["rows"][0]["fields"]["unit"]["source"]["file"] == "flat_export.csv"

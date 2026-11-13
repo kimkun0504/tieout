@@ -155,6 +155,7 @@ class JobStore:
             templates=self.templates,
             as_of=date.fromisoformat(meta.as_of) if meta.as_of else None,
             review=self.review(job_id),
+            source_name=meta.filename,
         )
         summary = result.summary()
         if summary != meta.last_summary or result.ok != meta.last_ok:
