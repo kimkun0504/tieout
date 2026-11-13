@@ -505,7 +505,7 @@ def write_outputs(stmt: Statement, out_dir: Any) -> dict[str, Any]:
         "xlsx": out / f"{stem}.t12.xlsx",
         "report": out / f"{stem}.t12.report.md",
     }
-    paths["json"].write_text(json.dumps(to_payload(stmt), indent=2, default=str), encoding="utf-8")
+    paths["json"].write_text(json.dumps(to_payload(stmt), indent=2, default=str, ensure_ascii=False), encoding="utf-8")
     rows = tidy_rows(stmt)
     with paths["csv"].open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0]) if rows else ["month"])

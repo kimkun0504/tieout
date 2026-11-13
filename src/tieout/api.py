@@ -361,9 +361,9 @@ def _export_t12(store: JobStore, job_id: str, fmt: str, stem: str) -> StreamingR
         suffix = path.name[len(Path(stmt.file).stem) :]
     mime = {
         "json": "application/json",
-        "csv": "text/csv",
+        "csv": "text/csv; charset=utf-8",
         "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "report": "text/markdown",
+        "report": "text/markdown; charset=utf-8",
     }[fmt]
     return StreamingResponse(
         io.BytesIO(data), media_type=mime, headers={"Content-Disposition": f'attachment; filename="{stem}{suffix}"'}
