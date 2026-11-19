@@ -1,0 +1,20 @@
+name: unslop
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: unslop-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  unslop:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: kimkun0504/unslop@a73f2a02a5d343de2b1d68df343e7bd010be748a

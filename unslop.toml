@@ -1,0 +1,3 @@
+version = "0.1.0"
+profile = "python"
+fast_check_seconds = 240

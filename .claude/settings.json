@@ -1,0 +1,44 @@
+{
+  "extraKnownMarketplaces": {
+    "unslop": {
+      "source": {
+        "source": "github",
+        "repo": "kimkun0504/unslop",
+        "ref": "v0.1.0"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "unslop@unslop": true
+  },
+  "permissions": {
+    "deny": [
+      "Edit(unslop.toml)",
+      "Edit(.unslop/**)",
+      "Edit(.claude/**)",
+      "Edit(.github/**)",
+      "Edit(CLAUDE.md)",
+      "Edit(AGENTS.md)",
+      "Edit(Dockerfile)",
+      "Edit(pyproject.toml)",
+      "Edit(web/package.json)",
+      "Edit(web/tsconfig.json)"
+    ]
+  },
+  "sandbox": {
+    "filesystem": {
+      "denyWrite": [
+        "./unslop.toml",
+        "./.unslop",
+        "./.claude",
+        "./.github",
+        "./CLAUDE.md",
+        "./AGENTS.md",
+        "./Dockerfile",
+        "./pyproject.toml",
+        "./web/package.json",
+        "./web/tsconfig.json"
+      ]
+    }
+  }
+}
