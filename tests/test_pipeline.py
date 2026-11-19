@@ -1,6 +1,8 @@
 from datetime import date
 from decimal import Decimal
 
+import pytest
+
 from tieout import clean_file
 from tieout.export import write_all
 from tieout.mapping import TemplateStore
@@ -12,6 +14,7 @@ def rules(result, severity=None):
 
 
 # --- stacked-header workbook: everything should tie out ---------------------
+
 
 def test_finds_two_row_header_below_title_rows(stacked_xlsx):
     r = clean_file(stacked_xlsx)
@@ -51,7 +54,7 @@ def test_values_are_typed_and_tidied(stacked_xlsx):
     assert third.get("lease_start") == date(2026, 3, 1)  # parsed from text "3/1/2026"
     b101 = r.rows[3]
     assert b101.get("unit") == "101"  # numeric 101 in Excel becomes text "101"
-    assert b101.get("tenant") == "O'brien, Sean"
+    assert b101.get("tenant") == "O'Brien, Sean"
 
 
 def test_vacant_marker_in_tenant_column_becomes_status(stacked_xlsx):
@@ -79,10 +82,11 @@ def test_summary(stacked_xlsx):
     assert s["units"] == 5
     assert s["status_counts"] == {"occupied": 4, "vacant": 1}
     assert s["physical_occupancy"] == 0.8
-    assert s["total_current_rent"] == 6775.0
+    assert s["total_current_rent"] == "6775.00"
 
 
 # --- flat CSV with planted problems ----------------------------------------
+
 
 def test_flat_csv_maps_alternate_names(flat_csv):
     r = clean_file(flat_csv)
@@ -126,6 +130,7 @@ def test_lease_expiry_needs_as_of(flat_csv):
 
 # --- templates and export ----------------------------------------------------
 
+
 def test_saved_template_is_reused(stacked_xlsx, tmp_path):
     store = TemplateStore(tmp_path / "templates")
     first = clean_file(stacked_xlsx)
@@ -141,3 +146,210 @@ def test_writes_all_outputs(flat_csv, tmp_path):
         assert p.exists() and p.stat().st_size > 0
     assert paths["csv"].read_text().splitlines()[0].startswith("unit,unit_type,sqft,tenant")
     assert "NEEDS REVIEW" in paths["report"].read_text()
+
+
+# --- regression tests for review findings ------------------------------------------
+
+
+def _xlsx(tmp_path, rows, merges=(), name="t.xlsx"):
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    for r in rows:
+        ws.append(r)
+    for m in merges:
+        ws.merge_cells(m)
+    path = tmp_path / name
+    wb.save(path)
+    return path
+
+
+def test_merged_section_label_is_not_a_unit(tmp_path):
+    """Finding 2: a section label merged across the row used to fill every column and become a unit."""
+    path = _xlsx(
+        tmp_path,
+        [
+            ["Unit", "Tenant", "Market Rent", "Rent", "Lease Start", "Lease End"],
+            ["Building A"],
+            ["101", "Lee", 1000, 1000, None, None],
+            ["Total", None, 1000, 1000],
+        ],
+        merges=["A2:F2"],
+    )
+    r = clean_file(path)
+    assert [x.get("unit") for x in r.rows] == ["101"]
+    assert r.rows[0].section == "Building A"
+    assert r.ok
+
+
+def test_uncomputed_formula_total_is_an_error_not_a_silent_pass(tmp_path):
+    """Finding 7: formulas with no saved result read as empty and skipped the tie-out."""
+    path = _xlsx(
+        tmp_path, [["Unit", "Tenant", "Rent"], ["101", "A", 1000], ["102", "B", 2000], ["Total", None, "=SUM(C2:C3)"]]
+    )
+    r = clean_file(path)
+    assert not r.ok
+    issue = next(i for i in r.issues if i.rule == "total_not_checkable")
+    assert issue.refs[0].cell == "C4"
+
+
+def test_csv_quoted_field_keeps_its_line_break(tmp_path):
+    """Finding 13: splitlines() glued multi-line quoted fields together."""
+    path = tmp_path / "ml.csv"
+    path.write_text('Unit,Tenant,Rent\n101,"Lee, Jordan\nc/o Jane Lee",1000\n102,Kim,1100\n', newline="")
+    r = clean_file(path)
+    assert [x.get("unit") for x in r.rows] == ["101", "102"]
+    assert r.rows[0].get("tenant") == "Lee, Jordan c/o Jane Lee"  # whitespace collapsed, words kept apart
+
+
+def test_tenant_named_total_stays_a_unit(tmp_path):
+    """Finding 3: 'Total Wine & More' deleted unit 101 and became a fake subtotal."""
+    path = _xlsx(
+        tmp_path,
+        [["Unit", "Tenant", "Rent"], ["101", "Total Wine & More", 5000], ["102", "Acme", 3000], ["Total", None, 8000]],
+    )
+    r = clean_file(path)
+    assert [x.get("unit") for x in r.rows] == ["101", "102"]
+    assert [t.label for t in r.totals] == ["Total"]
+    assert r.ok
+
+
+def test_repeated_header_with_total_column_is_not_a_subtotal(tmp_path):
+    """Finding 4: 'Total Charges' in a repeated header reset the subtotal scope."""
+    h = ["Unit", "Tenant", "Rent", "Total Charges"]
+    path = _xlsx(tmp_path, [h, ["101", "A", 1000, 1000], h, ["102", "B", 2000, 2000], ["Total", None, 3000, 3000]])
+    r = clean_file(path)
+    assert r.skipped.get("repeated_header") == 1
+    assert len(r.totals) == 1 and len(r.totals[0].scope_rows) == 2
+    assert r.ok
+
+
+def test_page_footer_does_not_hide_duplicates(tmp_path):
+    """Finding 12: 'Page 2 of 2' became a section, so duplicates across pages were missed."""
+    path = _xlsx(tmp_path, [["Unit", "Tenant", "Rent"], ["101", "A", 1000], ["Page 2 of 2"], ["101", "A", 1000]])
+    r = clean_file(path)
+    assert {x.section for x in r.rows} == {None}
+    assert "duplicate_unit" in rules(r, Severity.ERROR)
+
+
+def test_second_total_line_reuses_the_same_rows(tmp_path):
+    """Two consecutive total rows for one group (rent line, then deposit line)."""
+    path = _xlsx(
+        tmp_path,
+        [
+            ["Unit", "Tenant", "Rent", "Deposit"],
+            ["101", "A", 1000, 500],
+            ["102", "B", 2000, 700],
+            ["Total", None, 3000, None],
+            ["Total", None, None, 1200],
+        ],
+    )
+    r = clean_file(path)
+    assert [len(t.scope_rows) for t in r.totals] == [2, 2]
+    assert r.ok
+
+
+def test_no_status_or_tenant_column_infers_from_rent(tmp_path):
+    """Finding 6: every unit used to be marked vacant (0% occupancy) when both columns were missing."""
+    path = _xlsx(
+        tmp_path, [["Unit", "Rent", "Market Rent"], ["101", 1000, 1000], ["102", 0, 1100], ["103", 1200, 1200]]
+    )
+    r = clean_file(path)
+    assert [x.get("status") for x in r.rows] == ["occupied", "vacant", "occupied"]
+    assert all(x.values["status"].derived for x in r.rows)
+    assert r.summary()["physical_occupancy"] == round(2 / 3, 4)
+    assert "vacant_with_rent" not in rules(r)
+    assert "occupied_without_tenant" not in rules(r)  # there is no tenant column to be empty
+    assert "status_inferred" in rules(r, Severity.INFO)
+
+
+def test_rent_per_sqft_outlier_catches_a_misplaced_decimal(tmp_path):
+    rows = [["Unit", "Unit Type", "Sq Ft", "Tenant", "Rent"]]
+    rows += [[f"10{i}", "1x1", 700, f"T{i}", 1400 + i * 10] for i in range(6)]
+    rows += [["107", "1x1", 700, "T7", 145]]  # 1,450 typed as 145
+    rows += [["201", "2x2", 1000, "U1", 2000]]  # different type, group too small to judge
+    r = clean_file(_xlsx(tmp_path, rows))
+    flagged = [i for i in r.issues if i.rule == "rent_per_sqft_outlier"]
+    assert [i.row for i in flagged] == [8]
+    assert "per sq ft" in flagged[0].message
+
+
+def test_move_in_after_report_date(tmp_path):
+    from datetime import date
+
+    rows = [["Unit", "Tenant", "Rent", "Move In"], ["101", "A", 1000, "12/15/2026"], ["102", "B", 1000, "1/1/2024"]]
+    path = _xlsx(tmp_path, rows)
+    assert "move_in_after_report_date" not in rules(clean_file(path))
+    r = clean_file(path, as_of=date(2026, 11, 1))
+    assert [i.row for i in r.issues if i.rule == "move_in_after_report_date"] == [2]
+
+
+def test_zip_bomb_and_non_zip_xlsx_are_refused(tmp_path):
+    import zipfile
+
+    import pytest
+
+    from tieout.ingest import UnsupportedFormat, read_grid
+
+    fake = tmp_path / "fake.xlsx"
+    fake.write_bytes(b"not a zip")
+    with pytest.raises(UnsupportedFormat, match="not a valid"):
+        read_grid(fake)
+    bomb = tmp_path / "bomb.xlsx"
+    with zipfile.ZipFile(bomb, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("xl/worksheets/sheet1.xml", b"0" * (20 * 1024 * 1024))  # compresses ~1000:1
+    with pytest.raises(UnsupportedFormat, match="too large"):
+        read_grid(bomb)
+
+
+def test_workbook_lists_its_sheets(stacked_xlsx):
+    assert clean_file(stacked_xlsx).sheets == ["Rent Roll"]
+
+
+def test_utf16_tab_export_from_excel(tmp_path):
+    """Excel's 'Unicode Text' save format: UTF-16 with BOM, tab-delimited."""
+    path = tmp_path / "unicode.txt"
+    path.write_bytes("Unit\tTenant\tRent\n101\tMüller, Jörg\t1,200.00\n102\tLee\t1,300.00\n".encode("utf-16"))
+    r = clean_file(path)
+    assert [x.get("unit") for x in r.rows] == ["101", "102"]
+    assert r.rows[0].get("tenant") == "Müller, Jörg"
+
+
+def test_nul_bytes_are_stripped_not_fatal(tmp_path):
+    """Found by fuzzing on Python 3.10: a NUL byte crashed the csv reader."""
+    path = tmp_path / "nul.csv"
+    path.write_bytes(b"Unit,Tenant,Rent\n101,Le\x00e,1000\n")
+    r = clean_file(path)
+    assert r.rows[0].get("tenant") == "Lee"
+
+
+@pytest.mark.parametrize(
+    "a, b, same",
+    [
+        ("101", "Apt 101", True),
+        ("101", "Unit #101", True),
+        ("#101", "101", True),
+        ("A-101", "a 101", True),
+        ("0101", "101", True),
+        ("Suite 300", "300", True),
+        ("101", "102", False),
+        ("101A", "101B", False),
+        ("1010", "101", False),
+        ("PH", "Penthouse", False),
+    ],
+)
+def test_unit_key(a, b, same):
+    from tieout.validate import unit_key
+
+    assert (unit_key(a) == unit_key(b)) is same
+
+
+def test_unit_codes_spelled_differently_are_flagged_as_possible_duplicates():
+    from tieout.ingest import Grid
+
+    rows = [["Unit", "Tenant", "Rent"], ["101", "Ann", 1000], ["Apt 101", "Ann", 1000], ["102", "Bo", 1100]]
+    r = clean_file("x.csv", grid=Grid("x.csv", "x", rows))
+    (issue,) = [i for i in r.issues if i.rule == "possible_duplicate_unit"]
+    assert issue.severity.value == "warning" and "row 2" in issue.message and "row 3" in issue.message
+    assert not [i for i in r.issues if i.rule == "duplicate_unit"]

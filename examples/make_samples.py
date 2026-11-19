@@ -1,8 +1,8 @@
 """Write the two synthetic sample rent rolls to examples/data/ so you can try the CLI.
 
-    python examples/make_samples.py
-    tieout clean examples/data/maple_court.xlsx
-    tieout clean examples/data/flat_export.csv --as-of 2026-11-01
+python examples/make_samples.py
+tieout clean examples/data/maple_court.xlsx
+tieout clean examples/data/flat_export.csv --as-of 2026-11-01
 """
 
 import sys

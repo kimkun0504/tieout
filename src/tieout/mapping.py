@@ -14,10 +14,12 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from dataclasses import asdict, dataclass
+from collections.abc import Sequence
+from dataclasses import dataclass
 from difflib import SequenceMatcher
+from functools import lru_cache
 from pathlib import Path
-from typing import Protocol, Sequence
+from typing import Protocol
 
 from tieout.schema import FIELDS_BY_NAME, RENT_ROLL_FIELDS, FieldSpec
 
@@ -25,6 +27,12 @@ _NON_ALNUM = re.compile(r"[^a-z0-9#]+")
 
 
 def norm_header(text: object) -> str:
+    """Cached wrapper; see _norm_header."""
+    return _norm_header(text if isinstance(text, str) or text is None else str(text))
+
+
+@lru_cache(maxsize=8192)
+def _norm_header(text: str | None) -> str:
     """'Mkt. Rent ($)' -> 'mkt rent'. Keeps '#' because 'Unit #' is common."""
     if text is None:
         return ""
@@ -34,8 +42,44 @@ def norm_header(text: object) -> str:
     return " ".join(s.split())
 
 
+# Words that change what a column measures. "Monthly Rent/SF" contains the
+# synonym "monthly rent" but is a per-square-foot rate; "Annual Rent" is 12x
+# monthly rent. A header with one of these words only matches a synonym that
+# contains the same word.
+QUALIFIERS = frozenset(
+    {
+        "sf",
+        "psf",
+        "sqft",
+        "annual",
+        "annually",
+        "annualized",
+        "yr",
+        "year",
+        "yearly",
+        "pct",
+        "percent",
+        "ytd",
+        "per",
+        "prior",
+        "previous",
+        "last",
+        "budget",
+        "budgeted",
+        "variance",
+        "change",
+        "delta",
+        "balance",
+        "due",
+        "avg",
+        "average",
+    }
+)
+
+
+@lru_cache(maxsize=8192)
 def score_header(header: str, spec: FieldSpec) -> float:
-    """How well a normalized header matches a field, from 0 to 1."""
+    """How well a normalized header matches a field, from 0 to 1. Pure, so cached."""
     if not header:
         return 0.0
     best = 0.0
@@ -45,6 +89,8 @@ def score_header(header: str, spec: FieldSpec) -> float:
         if header == syn_n:
             return 1.0
         syn_tokens = set(syn_n.split())
+        if (tokens - syn_tokens) & QUALIFIERS:
+            continue  # the header measures something else (per SF, annual, prior period...)
         # Every word of a multi-word synonym appears in the header: "lease start date" vs "lease start".
         if len(syn_tokens) > 1 and syn_tokens <= tokens:
             best = max(best, 0.85)
@@ -70,9 +116,7 @@ class HeaderMapper(Protocol):
     {header: (field_name, confidence)} for the ones it can place.
     """
 
-    def suggest(
-        self, headers: dict[str, list[str]], free_fields: list[str]
-    ) -> dict[str, tuple[str, float]]: ...
+    def suggest(self, headers: dict[str, list[str]], free_fields: list[str]) -> dict[str, tuple[str, float]]: ...
 
 
 MIN_CONFIDENCE = 0.75
@@ -108,11 +152,11 @@ def map_columns(
         free = [f.name for f in RENT_ROLL_FIELDS if f.name not in taken_fields]
         if unmapped and free:
             for header, (field, conf) in mapper.suggest(unmapped, free).items():
-                col = next((c for c, h in headers.items() if h == header and c not in taken), None)
-                if col is None or field not in FIELDS_BY_NAME or field in taken_fields:
+                target = next((c for c, h in headers.items() if h == header and c not in taken), None)
+                if target is None or field not in FIELDS_BY_NAME or field in taken_fields:
                     continue
                 # Cap model guesses below rule matches so they always surface for review.
-                taken[col] = (field, min(conf, 0.8), "mapper")
+                taken[target] = (field, min(conf, 0.8), "mapper")
                 taken_fields.add(field)
 
     result = []
@@ -126,17 +170,31 @@ def map_columns(
 
 
 def header_fingerprint(headers: Sequence[str]) -> str:
-    """Stable ID for a header layout, used to look up saved templates."""
+    """Stable ID for a header layout (ordered header texts), used to look up saved templates."""
     key = "|".join(norm_header(h) for h in headers)
     return hashlib.sha256(key.encode()).hexdigest()[:16]
+
+
+def _header_keys(headers: dict[int, str]) -> dict[int, str]:
+    """Column -> 'normalized header#occurrence', so two columns both called 'Rent' stay distinct."""
+    seen: dict[str, int] = {}
+    keys = {}
+    for c in sorted(headers):
+        h = norm_header(headers[c])
+        seen[h] = seen.get(h, 0) + 1
+        keys[c] = f"{h}#{seen[h]}"
+    return keys
 
 
 class TemplateStore:
     """Saved, human-confirmed mappings keyed by header fingerprint.
 
-    Once a reviewer confirms how a source system's export maps to the schema,
-    every later file with the same layout maps instantly with no guessing.
+    Mappings are stored by header name (and occurrence), never by column
+    position: the same export with an extra blank column must still map
+    "Tenant" to tenant, not whatever now sits in the old position.
     """
+
+    VERSION = 2
 
     def __init__(self, directory: str | Path):
         self.dir = Path(directory)
@@ -148,23 +206,29 @@ class TemplateStore:
         p = self._path(header_fingerprint([headers[c] for c in sorted(headers)]))
         if not p.exists():
             return None
-        data = json.loads(p.read_text())
-        by_col = {m["column"]: m for m in data["mappings"]}
-        return [
-            ColumnMapping(c, headers[c], by_col.get(c, {}).get("field"), 1.0 if by_col.get(c, {}).get("field") else 0.0,
-                          "template" if by_col.get(c, {}).get("field") else "unmapped")
-            for c in sorted(headers)
-        ]
+        data = json.loads(p.read_text(encoding="utf-8"))
+        if data.get("version") != self.VERSION:
+            return None  # old position-based template: ignore rather than risk a wrong mapping
+        by_key: dict[str, str | None] = data["fields_by_header"]
+        keys = _header_keys(headers)
+        out = []
+        for c in sorted(headers):
+            field = by_key.get(keys[c])
+            out.append(ColumnMapping(c, headers[c], field, 1.0 if field else 0.0, "template" if field else "unmapped"))
+        return out
 
     def save(self, headers: dict[int, str], mappings: list[ColumnMapping], name: str = "") -> Path:
         self.dir.mkdir(parents=True, exist_ok=True)
         fp = header_fingerprint([headers[c] for c in sorted(headers)])
+        keys = _header_keys(headers)
+        by_col = {m.column: m.field for m in mappings}
         payload = {
+            "version": self.VERSION,
             "name": name,
             "fingerprint": fp,
             "headers": [headers[c] for c in sorted(headers)],
-            "mappings": [asdict(m) for m in mappings],
+            "fields_by_header": {keys[c]: by_col.get(c) for c in sorted(headers)},
         }
         p = self._path(fp)
-        p.write_text(json.dumps(payload, indent=2))
+        p.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         return p

@@ -1,0 +1,1131 @@
+{
+  "as_of": "2026-11-01",
+  "document_type": "rent_roll",
+  "fields": [
+    {
+      "description": "Unit or suite identifier",
+      "name": "unit",
+      "type": "text"
+    },
+    {
+      "description": "Floor plan or bed/bath type",
+      "name": "unit_type",
+      "type": "text"
+    },
+    {
+      "description": "Rentable square feet",
+      "name": "sqft",
+      "type": "number"
+    },
+    {
+      "description": "Tenant or resident name",
+      "name": "tenant",
+      "type": "text"
+    },
+    {
+      "description": "occupied / vacant / notice / model / down / future (a lease not yet started)",
+      "name": "status",
+      "type": "status"
+    },
+    {
+      "description": "Market or asking monthly rent",
+      "name": "market_rent",
+      "type": "money"
+    },
+    {
+      "description": "Rent actually charged per month",
+      "name": "current_rent",
+      "type": "money"
+    },
+    {
+      "description": "Rent per year (common in commercial rent rolls)",
+      "name": "annual_rent",
+      "type": "money"
+    },
+    {
+      "description": "Annual rent per square foot (commercial rent rolls)",
+      "name": "rent_psf",
+      "type": "money"
+    },
+    {
+      "description": "Monthly concessions or discounts (usually negative)",
+      "name": "concessions",
+      "type": "money"
+    },
+    {
+      "description": "Recurring non-rent charges (parking, pet, storage, utilities)",
+      "name": "other_charges",
+      "type": "money"
+    },
+    {
+      "description": "All recurring monthly charges for the unit",
+      "name": "total_charges",
+      "type": "money"
+    },
+    {
+      "description": "Security deposit held",
+      "name": "deposit",
+      "type": "money"
+    },
+    {
+      "description": "Move-in date",
+      "name": "move_in",
+      "type": "date"
+    },
+    {
+      "description": "Lease start date",
+      "name": "lease_start",
+      "type": "date"
+    },
+    {
+      "description": "Lease end date",
+      "name": "lease_end",
+      "type": "date"
+    }
+  ],
+  "issues": [
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "lease_end",
+      "id": "dd707bdce636",
+      "message": "Unit 1C: lease ends May 31, 2026, before it starts on Jun 1, 2026.",
+      "row": 4,
+      "rule": "lease_dates_reversed",
+      "severity": "error"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "unit",
+      "id": "597336ddcc31",
+      "message": "Unit '1C' appears 2 times (rows 4, 5).",
+      "row": 5,
+      "rule": "duplicate_unit",
+      "severity": "error"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [
+        "F7"
+      ],
+      "field": "current_rent",
+      "id": "9e4b96f2381b",
+      "message": "'Total' reports rent of 7,025.00, but the 5 units it covers add up to 6,975.00 (difference 50.00).",
+      "row": 7,
+      "rule": "total_does_not_tie_out",
+      "severity": "error"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "current_rent",
+      "id": "4e2612d8e473",
+      "message": "Unit 1B is vacant but shows rent of 1,300.00.",
+      "row": 3,
+      "rule": "vacant_with_rent",
+      "severity": "warning"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [
+        "H6"
+      ],
+      "field": "move_in",
+      "id": "8a5226a45ed7",
+      "message": "Move in: incomplete date 'TBD' (needs month, day and year)",
+      "row": 6,
+      "rule": "unparsed_value",
+      "severity": "warning"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": null,
+      "id": "157159d15d14",
+      "message": "Column 'Past Due' was not mapped and is not in the output.",
+      "row": null,
+      "rule": "unmapped_column",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "lease_end",
+      "id": "b92543625ea3",
+      "message": "Unit 1C: lease ended May 31, 2026 but the unit is notice (month to month?).",
+      "row": 4,
+      "rule": "lease_expired",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "lease_end",
+      "id": "a5e6b74fc76c",
+      "message": "Unit 1C: lease ended Jul 31, 2026 but the unit is occupied (month to month?).",
+      "row": 5,
+      "rule": "lease_expired",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "sqft",
+      "id": "17ba83c39300",
+      "message": "'Total' sq ft of 3,965 ties out to its 5 units.",
+      "row": 7,
+      "rule": "total_ties_out",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "market_rent",
+      "id": "d93e073b73ce",
+      "message": "'Total' market rent of 7,100.00 ties out to its 5 units.",
+      "row": 7,
+      "rule": "total_ties_out",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "deposit",
+      "id": "ee39a359aca4",
+      "message": "'Total' deposit of 2,350.00 ties out to its 5 units.",
+      "row": 7,
+      "rule": "total_ties_out",
+      "severity": "info"
+    }
+  ],
+  "mappings": [
+    {
+      "column": 1,
+      "confidence": 1.0,
+      "field": "unit",
+      "header": "Unit",
+      "key": "Unit",
+      "method": "synonym"
+    },
+    {
+      "column": 2,
+      "confidence": 1.0,
+      "field": "tenant",
+      "header": "Tenant",
+      "key": "Tenant",
+      "method": "synonym"
+    },
+    {
+      "column": 3,
+      "confidence": 1.0,
+      "field": "status",
+      "header": "Status",
+      "key": "Status",
+      "method": "synonym"
+    },
+    {
+      "column": 4,
+      "confidence": 1.0,
+      "field": "sqft",
+      "header": "Sq Ft",
+      "key": "Sq Ft",
+      "method": "synonym"
+    },
+    {
+      "column": 5,
+      "confidence": 1.0,
+      "field": "market_rent",
+      "header": "Market Rent",
+      "key": "Market Rent",
+      "method": "synonym"
+    },
+    {
+      "column": 6,
+      "confidence": 1.0,
+      "field": "current_rent",
+      "header": "Rent",
+      "key": "Rent",
+      "method": "synonym"
+    },
+    {
+      "column": 7,
+      "confidence": 1.0,
+      "field": "deposit",
+      "header": "Deposit",
+      "key": "Deposit",
+      "method": "synonym"
+    },
+    {
+      "column": 8,
+      "confidence": 1.0,
+      "field": "move_in",
+      "header": "Move-in",
+      "key": "Move-in",
+      "method": "synonym"
+    },
+    {
+      "column": 9,
+      "confidence": 1.0,
+      "field": "lease_start",
+      "header": "Lease From",
+      "key": "Lease From",
+      "method": "synonym"
+    },
+    {
+      "column": 10,
+      "confidence": 1.0,
+      "field": "lease_end",
+      "header": "Lease To",
+      "key": "Lease To",
+      "method": "synonym"
+    },
+    {
+      "column": 11,
+      "confidence": 0.0,
+      "field": null,
+      "header": "Past Due",
+      "key": "Past Due",
+      "method": "unmapped"
+    }
+  ],
+  "metrics": {
+    "avg_in_place_rent": "1418.75",
+    "avg_market_rent": "1420.00",
+    "avg_rent_per_sqft": "1.75",
+    "concessions": null,
+    "economic_occupancy": 0.7993,
+    "gross_potential_rent": "7100.00",
+    "in_place_rent": "5675.00",
+    "lease_expirations": {
+      "after_12_months": 0,
+      "as_of": "2026-11-01",
+      "by_month": [
+        {
+          "month": "2026-11",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2026-12",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-01",
+          "rent": "2850.00",
+          "units": 2
+        },
+        {
+          "month": "2027-02",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-03",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-04",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-05",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-06",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-07",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-08",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-09",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-10",
+          "rent": "0.00",
+          "units": 0
+        }
+      ],
+      "expired_or_mtm": 2,
+      "no_end_date": 0
+    },
+    "loss_to_lease": "125.00",
+    "loss_to_lease_pct": 0.0216,
+    "occupied_units": 4,
+    "physical_occupancy": 0.8,
+    "unit_mix": [
+      {
+        "avg_in_place_rent": "1418.75",
+        "avg_market_rent": "1420.00",
+        "avg_sqft": 793.0,
+        "occupancy": 0.8,
+        "occupied": 4,
+        "unit_type": "(none)",
+        "units": 5
+      }
+    ],
+    "units": 5,
+    "vacancy_loss": "1300.00",
+    "vacant_units": 1
+  },
+  "ok": false,
+  "report_date": null,
+  "review": {
+    "acknowledgments": [],
+    "audit": [],
+    "corrections": [],
+    "mapping_overrides": {},
+    "version": 1
+  },
+  "rows": [
+    {
+      "charges": [],
+      "fields": {
+        "current_rent": {
+          "derived": false,
+          "raw": "1,275.00",
+          "source": {
+            "cell": "F2",
+            "col": 6,
+            "file": "flat_export.csv",
+            "row": 2,
+            "sheet": "flat_export"
+          },
+          "value": "1275.00"
+        },
+        "deposit": {
+          "derived": false,
+          "raw": "500.00",
+          "source": {
+            "cell": "G2",
+            "col": 7,
+            "file": "flat_export.csv",
+            "row": 2,
+            "sheet": "flat_export"
+          },
+          "value": "500.00"
+        },
+        "lease_end": {
+          "derived": false,
+          "raw": "01/14/2027",
+          "source": {
+            "cell": "J2",
+            "col": 10,
+            "file": "flat_export.csv",
+            "row": 2,
+            "sheet": "flat_export"
+          },
+          "value": "2027-01-14"
+        },
+        "lease_start": {
+          "derived": false,
+          "raw": "01/15/2026",
+          "source": {
+            "cell": "I2",
+            "col": 9,
+            "file": "flat_export.csv",
+            "row": 2,
+            "sheet": "flat_export"
+          },
+          "value": "2026-01-15"
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": "1,300.00",
+          "source": {
+            "cell": "E2",
+            "col": 5,
+            "file": "flat_export.csv",
+            "row": 2,
+            "sheet": "flat_export"
+          },
+          "value": "1300.00"
+        },
+        "move_in": {
+          "derived": false,
+          "raw": "01/15/2024",
+          "source": {
+            "cell": "H2",
+            "col": 8,
+            "file": "flat_export.csv",
+            "row": 2,
+            "sheet": "flat_export"
+          },
+          "value": "2024-01-15"
+        },
+        "sqft": {
+          "derived": false,
+          "raw": "720",
+          "source": {
+            "cell": "D2",
+            "col": 4,
+            "file": "flat_export.csv",
+            "row": 2,
+            "sheet": "flat_export"
+          },
+          "value": 720
+        },
+        "status": {
+          "derived": false,
+          "raw": "Current",
+          "source": {
+            "cell": "C2",
+            "col": 3,
+            "file": "flat_export.csv",
+            "row": 2,
+            "sheet": "flat_export"
+          },
+          "value": "occupied"
+        },
+        "tenant": {
+          "derived": false,
+          "raw": "Lee, Jordan",
+          "source": {
+            "cell": "B2",
+            "col": 2,
+            "file": "flat_export.csv",
+            "row": 2,
+            "sheet": "flat_export"
+          },
+          "value": "Lee, Jordan"
+        },
+        "unit": {
+          "derived": false,
+          "raw": "1A",
+          "source": {
+            "cell": "A2",
+            "col": 1,
+            "file": "flat_export.csv",
+            "row": 2,
+            "sheet": "flat_export"
+          },
+          "value": "1A"
+        }
+      },
+      "section": null,
+      "source_row": 2
+    },
+    {
+      "charges": [],
+      "fields": {
+        "current_rent": {
+          "derived": false,
+          "raw": "1,300.00",
+          "source": {
+            "cell": "F3",
+            "col": 6,
+            "file": "flat_export.csv",
+            "row": 3,
+            "sheet": "flat_export"
+          },
+          "value": "1300.00"
+        },
+        "deposit": {
+          "derived": false,
+          "raw": null,
+          "source": {
+            "cell": "G3",
+            "col": 7,
+            "file": "flat_export.csv",
+            "row": 3,
+            "sheet": "flat_export"
+          },
+          "value": null
+        },
+        "lease_end": {
+          "derived": false,
+          "raw": null,
+          "source": {
+            "cell": "J3",
+            "col": 10,
+            "file": "flat_export.csv",
+            "row": 3,
+            "sheet": "flat_export"
+          },
+          "value": null
+        },
+        "lease_start": {
+          "derived": false,
+          "raw": null,
+          "source": {
+            "cell": "I3",
+            "col": 9,
+            "file": "flat_export.csv",
+            "row": 3,
+            "sheet": "flat_export"
+          },
+          "value": null
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": "1,300.00",
+          "source": {
+            "cell": "E3",
+            "col": 5,
+            "file": "flat_export.csv",
+            "row": 3,
+            "sheet": "flat_export"
+          },
+          "value": "1300.00"
+        },
+        "move_in": {
+          "derived": false,
+          "raw": null,
+          "source": {
+            "cell": "H3",
+            "col": 8,
+            "file": "flat_export.csv",
+            "row": 3,
+            "sheet": "flat_export"
+          },
+          "value": null
+        },
+        "sqft": {
+          "derived": false,
+          "raw": "720",
+          "source": {
+            "cell": "D3",
+            "col": 4,
+            "file": "flat_export.csv",
+            "row": 3,
+            "sheet": "flat_export"
+          },
+          "value": 720
+        },
+        "status": {
+          "derived": false,
+          "raw": "Vacant-Unrented",
+          "source": {
+            "cell": "C3",
+            "col": 3,
+            "file": "flat_export.csv",
+            "row": 3,
+            "sheet": "flat_export"
+          },
+          "value": "vacant"
+        },
+        "tenant": {
+          "derived": false,
+          "raw": null,
+          "source": {
+            "cell": "B3",
+            "col": 2,
+            "file": "flat_export.csv",
+            "row": 3,
+            "sheet": "flat_export"
+          },
+          "value": null
+        },
+        "unit": {
+          "derived": false,
+          "raw": "1B",
+          "source": {
+            "cell": "A3",
+            "col": 1,
+            "file": "flat_export.csv",
+            "row": 3,
+            "sheet": "flat_export"
+          },
+          "value": "1B"
+        }
+      },
+      "section": null,
+      "source_row": 3
+    },
+    {
+      "charges": [],
+      "fields": {
+        "current_rent": {
+          "derived": false,
+          "raw": "1,400.00",
+          "source": {
+            "cell": "F4",
+            "col": 6,
+            "file": "flat_export.csv",
+            "row": 4,
+            "sheet": "flat_export"
+          },
+          "value": "1400.00"
+        },
+        "deposit": {
+          "derived": false,
+          "raw": "600.00",
+          "source": {
+            "cell": "G4",
+            "col": 7,
+            "file": "flat_export.csv",
+            "row": 4,
+            "sheet": "flat_export"
+          },
+          "value": "600.00"
+        },
+        "lease_end": {
+          "derived": false,
+          "raw": "05/31/2026",
+          "source": {
+            "cell": "J4",
+            "col": 10,
+            "file": "flat_export.csv",
+            "row": 4,
+            "sheet": "flat_export"
+          },
+          "value": "2026-05-31"
+        },
+        "lease_start": {
+          "derived": false,
+          "raw": "06/01/2026",
+          "source": {
+            "cell": "I4",
+            "col": 9,
+            "file": "flat_export.csv",
+            "row": 4,
+            "sheet": "flat_export"
+          },
+          "value": "2026-06-01"
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": "1,450.00",
+          "source": {
+            "cell": "E4",
+            "col": 5,
+            "file": "flat_export.csv",
+            "row": 4,
+            "sheet": "flat_export"
+          },
+          "value": "1450.00"
+        },
+        "move_in": {
+          "derived": false,
+          "raw": "06/01/2023",
+          "source": {
+            "cell": "H4",
+            "col": 8,
+            "file": "flat_export.csv",
+            "row": 4,
+            "sheet": "flat_export"
+          },
+          "value": "2023-06-01"
+        },
+        "sqft": {
+          "derived": false,
+          "raw": "810",
+          "source": {
+            "cell": "D4",
+            "col": 4,
+            "file": "flat_export.csv",
+            "row": 4,
+            "sheet": "flat_export"
+          },
+          "value": 810
+        },
+        "status": {
+          "derived": false,
+          "raw": "Notice-Unrented",
+          "source": {
+            "cell": "C4",
+            "col": 3,
+            "file": "flat_export.csv",
+            "row": 4,
+            "sheet": "flat_export"
+          },
+          "value": "notice"
+        },
+        "tenant": {
+          "derived": false,
+          "raw": "Brooks, Taylor",
+          "source": {
+            "cell": "B4",
+            "col": 2,
+            "file": "flat_export.csv",
+            "row": 4,
+            "sheet": "flat_export"
+          },
+          "value": "Brooks, Taylor"
+        },
+        "unit": {
+          "derived": false,
+          "raw": "1C",
+          "source": {
+            "cell": "A4",
+            "col": 1,
+            "file": "flat_export.csv",
+            "row": 4,
+            "sheet": "flat_export"
+          },
+          "value": "1C"
+        }
+      },
+      "section": null,
+      "source_row": 4
+    },
+    {
+      "charges": [],
+      "fields": {
+        "current_rent": {
+          "derived": false,
+          "raw": "1,425.00",
+          "source": {
+            "cell": "F5",
+            "col": 6,
+            "file": "flat_export.csv",
+            "row": 5,
+            "sheet": "flat_export"
+          },
+          "value": "1425.00"
+        },
+        "deposit": {
+          "derived": false,
+          "raw": "600.00",
+          "source": {
+            "cell": "G5",
+            "col": 7,
+            "file": "flat_export.csv",
+            "row": 5,
+            "sheet": "flat_export"
+          },
+          "value": "600.00"
+        },
+        "lease_end": {
+          "derived": false,
+          "raw": "07/31/2026",
+          "source": {
+            "cell": "J5",
+            "col": 10,
+            "file": "flat_export.csv",
+            "row": 5,
+            "sheet": "flat_export"
+          },
+          "value": "2026-07-31"
+        },
+        "lease_start": {
+          "derived": false,
+          "raw": "08/01/2025",
+          "source": {
+            "cell": "I5",
+            "col": 9,
+            "file": "flat_export.csv",
+            "row": 5,
+            "sheet": "flat_export"
+          },
+          "value": "2025-08-01"
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": "1,450.00",
+          "source": {
+            "cell": "E5",
+            "col": 5,
+            "file": "flat_export.csv",
+            "row": 5,
+            "sheet": "flat_export"
+          },
+          "value": "1450.00"
+        },
+        "move_in": {
+          "derived": false,
+          "raw": "08/01/2025",
+          "source": {
+            "cell": "H5",
+            "col": 8,
+            "file": "flat_export.csv",
+            "row": 5,
+            "sheet": "flat_export"
+          },
+          "value": "2025-08-01"
+        },
+        "sqft": {
+          "derived": false,
+          "raw": "810",
+          "source": {
+            "cell": "D5",
+            "col": 4,
+            "file": "flat_export.csv",
+            "row": 5,
+            "sheet": "flat_export"
+          },
+          "value": 810
+        },
+        "status": {
+          "derived": false,
+          "raw": "Current",
+          "source": {
+            "cell": "C5",
+            "col": 3,
+            "file": "flat_export.csv",
+            "row": 5,
+            "sheet": "flat_export"
+          },
+          "value": "occupied"
+        },
+        "tenant": {
+          "derived": false,
+          "raw": "Kim, Alex",
+          "source": {
+            "cell": "B5",
+            "col": 2,
+            "file": "flat_export.csv",
+            "row": 5,
+            "sheet": "flat_export"
+          },
+          "value": "Kim, Alex"
+        },
+        "unit": {
+          "derived": false,
+          "raw": "1C",
+          "source": {
+            "cell": "A5",
+            "col": 1,
+            "file": "flat_export.csv",
+            "row": 5,
+            "sheet": "flat_export"
+          },
+          "value": "1C"
+        }
+      },
+      "section": null,
+      "source_row": 5
+    },
+    {
+      "charges": [],
+      "fields": {
+        "current_rent": {
+          "derived": false,
+          "raw": "1,575.00",
+          "source": {
+            "cell": "F6",
+            "col": 6,
+            "file": "flat_export.csv",
+            "row": 6,
+            "sheet": "flat_export"
+          },
+          "value": "1575.00"
+        },
+        "deposit": {
+          "derived": false,
+          "raw": "650.00",
+          "source": {
+            "cell": "G6",
+            "col": 7,
+            "file": "flat_export.csv",
+            "row": 6,
+            "sheet": "flat_export"
+          },
+          "value": "650.00"
+        },
+        "lease_end": {
+          "derived": false,
+          "raw": "01/31/2027",
+          "source": {
+            "cell": "J6",
+            "col": 10,
+            "file": "flat_export.csv",
+            "row": 6,
+            "sheet": "flat_export"
+          },
+          "value": "2027-01-31"
+        },
+        "lease_start": {
+          "derived": false,
+          "raw": "02/01/2026",
+          "source": {
+            "cell": "I6",
+            "col": 9,
+            "file": "flat_export.csv",
+            "row": 6,
+            "sheet": "flat_export"
+          },
+          "value": "2026-02-01"
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": "1,600.00",
+          "source": {
+            "cell": "E6",
+            "col": 5,
+            "file": "flat_export.csv",
+            "row": 6,
+            "sheet": "flat_export"
+          },
+          "value": "1600.00"
+        },
+        "move_in": {
+          "derived": false,
+          "issue": "incomplete date 'TBD' (needs month, day and year)",
+          "raw": "TBD",
+          "source": {
+            "cell": "H6",
+            "col": 8,
+            "file": "flat_export.csv",
+            "row": 6,
+            "sheet": "flat_export"
+          },
+          "value": null
+        },
+        "sqft": {
+          "derived": false,
+          "raw": "905",
+          "source": {
+            "cell": "D6",
+            "col": 4,
+            "file": "flat_export.csv",
+            "row": 6,
+            "sheet": "flat_export"
+          },
+          "value": 905
+        },
+        "status": {
+          "derived": false,
+          "raw": "Current",
+          "source": {
+            "cell": "C6",
+            "col": 3,
+            "file": "flat_export.csv",
+            "row": 6,
+            "sheet": "flat_export"
+          },
+          "value": "occupied"
+        },
+        "tenant": {
+          "derived": false,
+          "raw": "Rivera, Sam",
+          "source": {
+            "cell": "B6",
+            "col": 2,
+            "file": "flat_export.csv",
+            "row": 6,
+            "sheet": "flat_export"
+          },
+          "value": "Rivera, Sam"
+        },
+        "unit": {
+          "derived": false,
+          "raw": "2A",
+          "source": {
+            "cell": "A6",
+            "col": 1,
+            "file": "flat_export.csv",
+            "row": 6,
+            "sheet": "flat_export"
+          },
+          "value": "2A"
+        }
+      },
+      "section": null,
+      "source_row": 6
+    }
+  ],
+  "skipped": {},
+  "source": {
+    "file": "flat_export.csv",
+    "header_rows": [
+      1
+    ],
+    "sheet": "flat_export",
+    "sheets": []
+  },
+  "stated_figures": [],
+  "summary": {
+    "acknowledged": 0,
+    "corrections": 0,
+    "errors": 3,
+    "future_leases": 0,
+    "physical_occupancy": 0.8,
+    "status_counts": {
+      "notice": 1,
+      "occupied": 3,
+      "vacant": 1
+    },
+    "total_current_rent": "6975.00",
+    "total_market_rent": "7100.00",
+    "total_sqft": 3965,
+    "units": 5,
+    "warnings": 2
+  },
+  "totals": [
+    {
+      "amounts": {
+        "current_rent": {
+          "derived": false,
+          "raw": "7,025.00",
+          "source": {
+            "cell": "F7",
+            "col": 6,
+            "file": "flat_export.csv",
+            "row": 7,
+            "sheet": "flat_export"
+          },
+          "value": "7025.00"
+        },
+        "deposit": {
+          "derived": false,
+          "raw": "2,350.00",
+          "source": {
+            "cell": "G7",
+            "col": 7,
+            "file": "flat_export.csv",
+            "row": 7,
+            "sheet": "flat_export"
+          },
+          "value": "2350.00"
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": "7,100.00",
+          "source": {
+            "cell": "E7",
+            "col": 5,
+            "file": "flat_export.csv",
+            "row": 7,
+            "sheet": "flat_export"
+          },
+          "value": "7100.00"
+        },
+        "sqft": {
+          "derived": false,
+          "raw": "3965",
+          "source": {
+            "cell": "D7",
+            "col": 4,
+            "file": "flat_export.csv",
+            "row": 7,
+            "sheet": "flat_export"
+          },
+          "value": 3965
+        }
+      },
+      "computed": {
+        "current_rent": "6975.00",
+        "deposit": "2350.00",
+        "market_rent": "7100.00",
+        "sqft": "3965"
+      },
+      "covers_rows": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "label": "Total",
+      "row": 7,
+      "section": null
+    }
+  ]
+}

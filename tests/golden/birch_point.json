@@ -1,0 +1,1191 @@
+{
+  "as_of": "2026-11-01",
+  "document_type": "rent_roll",
+  "fields": [
+    {
+      "description": "Unit or suite identifier",
+      "name": "unit",
+      "type": "text"
+    },
+    {
+      "description": "Floor plan or bed/bath type",
+      "name": "unit_type",
+      "type": "text"
+    },
+    {
+      "description": "Rentable square feet",
+      "name": "sqft",
+      "type": "number"
+    },
+    {
+      "description": "Tenant or resident name",
+      "name": "tenant",
+      "type": "text"
+    },
+    {
+      "description": "occupied / vacant / notice / model / down / future (a lease not yet started)",
+      "name": "status",
+      "type": "status"
+    },
+    {
+      "description": "Market or asking monthly rent",
+      "name": "market_rent",
+      "type": "money"
+    },
+    {
+      "description": "Rent actually charged per month",
+      "name": "current_rent",
+      "type": "money"
+    },
+    {
+      "description": "Rent per year (common in commercial rent rolls)",
+      "name": "annual_rent",
+      "type": "money"
+    },
+    {
+      "description": "Annual rent per square foot (commercial rent rolls)",
+      "name": "rent_psf",
+      "type": "money"
+    },
+    {
+      "description": "Monthly concessions or discounts (usually negative)",
+      "name": "concessions",
+      "type": "money"
+    },
+    {
+      "description": "Recurring non-rent charges (parking, pet, storage, utilities)",
+      "name": "other_charges",
+      "type": "money"
+    },
+    {
+      "description": "All recurring monthly charges for the unit",
+      "name": "total_charges",
+      "type": "money"
+    },
+    {
+      "description": "Security deposit held",
+      "name": "deposit",
+      "type": "money"
+    },
+    {
+      "description": "Move-in date",
+      "name": "move_in",
+      "type": "date"
+    },
+    {
+      "description": "Lease start date",
+      "name": "lease_start",
+      "type": "date"
+    },
+    {
+      "description": "Lease end date",
+      "name": "lease_end",
+      "type": "date"
+    }
+  ],
+  "issues": [
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "lease_end",
+      "id": "4c9d801046a3",
+      "message": "Unit A102: lease ended Feb 28, 2026 but the unit is notice (month to month?).",
+      "row": 7,
+      "rule": "lease_expired",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "sqft",
+      "id": "7ba264579062",
+      "message": "'Total' sq ft of 3,500 ties out to its 4 units.",
+      "row": 11,
+      "rule": "total_ties_out",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "market_rent",
+      "id": "384ac002c05c",
+      "message": "'Total' market rent of 7,200.00 ties out to its 4 units.",
+      "row": 11,
+      "rule": "total_ties_out",
+      "severity": "info"
+    },
+    {
+      "acknowledgment": null,
+      "cells": [],
+      "field": "charge_amount",
+      "id": "657e2736c559",
+      "message": "'Total' charges of 5,010.00 ties out to its 4 units.",
+      "row": 11,
+      "rule": "total_ties_out",
+      "severity": "info"
+    }
+  ],
+  "mappings": [
+    {
+      "column": 1,
+      "confidence": 1.0,
+      "field": "unit",
+      "header": "Unit",
+      "key": "Unit",
+      "method": "synonym"
+    },
+    {
+      "column": 2,
+      "confidence": 1.0,
+      "field": "unit_type",
+      "header": "Unit Type",
+      "key": "Unit Type",
+      "method": "synonym"
+    },
+    {
+      "column": 3,
+      "confidence": 1.0,
+      "field": "sqft",
+      "header": "Sq Ft",
+      "key": "Sq Ft",
+      "method": "synonym"
+    },
+    {
+      "column": 4,
+      "confidence": 1.0,
+      "field": "tenant",
+      "header": "Resident",
+      "key": "Resident",
+      "method": "synonym"
+    },
+    {
+      "column": 5,
+      "confidence": 1.0,
+      "field": "status",
+      "header": "Status",
+      "key": "Status",
+      "method": "synonym"
+    },
+    {
+      "column": 6,
+      "confidence": 1.0,
+      "field": "market_rent",
+      "header": "Market Rent",
+      "key": "Market Rent",
+      "method": "synonym"
+    },
+    {
+      "column": 7,
+      "confidence": 1.0,
+      "field": "charge_code",
+      "header": "Charge Code",
+      "key": "Charge Code",
+      "method": "synonym"
+    },
+    {
+      "column": 8,
+      "confidence": 1.0,
+      "field": "charge_amount",
+      "header": "Amount",
+      "key": "Amount",
+      "method": "synonym"
+    },
+    {
+      "column": 9,
+      "confidence": 1.0,
+      "field": "lease_start",
+      "header": "Lease From",
+      "key": "Lease From",
+      "method": "synonym"
+    },
+    {
+      "column": 10,
+      "confidence": 1.0,
+      "field": "lease_end",
+      "header": "Lease To",
+      "key": "Lease To",
+      "method": "synonym"
+    }
+  ],
+  "metrics": {
+    "avg_in_place_rent": "1666.67",
+    "avg_market_rent": "1800.00",
+    "avg_rent_per_sqft": "2.04",
+    "concessions": "-100.00",
+    "economic_occupancy": 0.6944,
+    "gross_potential_rent": "7200.00",
+    "in_place_rent": "5000.00",
+    "lease_expirations": {
+      "after_12_months": 0,
+      "as_of": "2026-11-01",
+      "by_month": [
+        {
+          "month": "2026-11",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2026-12",
+          "rent": "1450.00",
+          "units": 1
+        },
+        {
+          "month": "2027-01",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-02",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-03",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-04",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-05",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-06",
+          "rent": "2050.00",
+          "units": 1
+        },
+        {
+          "month": "2027-07",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-08",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-09",
+          "rent": "0.00",
+          "units": 0
+        },
+        {
+          "month": "2027-10",
+          "rent": "0.00",
+          "units": 0
+        }
+      ],
+      "expired_or_mtm": 1,
+      "no_end_date": 0
+    },
+    "loss_to_lease": "100.00",
+    "loss_to_lease_pct": 0.0196,
+    "occupied_units": 3,
+    "physical_occupancy": 0.75,
+    "unit_mix": [
+      {
+        "avg_in_place_rent": "1475.00",
+        "avg_market_rent": "1500.00",
+        "avg_sqft": 700.0,
+        "occupancy": 1.0,
+        "occupied": 2,
+        "unit_type": "1x1",
+        "units": 2
+      },
+      {
+        "avg_in_place_rent": "2050.00",
+        "avg_market_rent": "2100.00",
+        "avg_sqft": 1050.0,
+        "occupancy": 0.5,
+        "occupied": 1,
+        "unit_type": "2x2",
+        "units": 2
+      }
+    ],
+    "units": 4,
+    "vacancy_loss": "2100.00",
+    "vacant_units": 1
+  },
+  "ok": true,
+  "report_date": null,
+  "review": {
+    "acknowledgments": [],
+    "audit": [],
+    "corrections": [],
+    "mapping_overrides": {},
+    "version": 1
+  },
+  "rows": [
+    {
+      "charges": [
+        {
+          "amount": {
+            "derived": false,
+            "raw": 1450,
+            "source": {
+              "cell": "H4",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 4,
+              "sheet": "Rent Roll"
+            },
+            "value": "1450.00"
+          },
+          "category": "rent",
+          "code": {
+            "derived": false,
+            "raw": "RENT",
+            "source": {
+              "cell": "G4",
+              "col": 7,
+              "file": "birch_point.xlsx",
+              "row": 4,
+              "sheet": "Rent Roll"
+            },
+            "value": "RENT"
+          }
+        },
+        {
+          "amount": {
+            "derived": false,
+            "raw": 75,
+            "source": {
+              "cell": "H5",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 5,
+              "sheet": "Rent Roll"
+            },
+            "value": "75.00"
+          },
+          "category": "other",
+          "code": {
+            "derived": false,
+            "raw": "PARK",
+            "source": {
+              "cell": "G5",
+              "col": 7,
+              "file": "birch_point.xlsx",
+              "row": 5,
+              "sheet": "Rent Roll"
+            },
+            "value": "PARK"
+          }
+        },
+        {
+          "amount": {
+            "derived": false,
+            "raw": 35,
+            "source": {
+              "cell": "H6",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 6,
+              "sheet": "Rent Roll"
+            },
+            "value": "35.00"
+          },
+          "category": "other",
+          "code": {
+            "derived": false,
+            "raw": "PET",
+            "source": {
+              "cell": "G6",
+              "col": 7,
+              "file": "birch_point.xlsx",
+              "row": 6,
+              "sheet": "Rent Roll"
+            },
+            "value": "PET"
+          }
+        }
+      ],
+      "fields": {
+        "current_rent": {
+          "derived": true,
+          "note": "Sum of this unit's rent charge lines.",
+          "raw": null,
+          "source": {
+            "cell": "H4",
+            "col": 8,
+            "file": "birch_point.xlsx",
+            "row": 4,
+            "sheet": "Rent Roll"
+          },
+          "sources": [
+            {
+              "cell": "H4",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 4,
+              "sheet": "Rent Roll"
+            }
+          ],
+          "value": "1450.00"
+        },
+        "lease_end": {
+          "derived": false,
+          "raw": "12/31/2026",
+          "source": {
+            "cell": "J4",
+            "col": 10,
+            "file": "birch_point.xlsx",
+            "row": 4,
+            "sheet": "Rent Roll"
+          },
+          "value": "2026-12-31"
+        },
+        "lease_start": {
+          "derived": false,
+          "raw": "1/1/2026",
+          "source": {
+            "cell": "I4",
+            "col": 9,
+            "file": "birch_point.xlsx",
+            "row": 4,
+            "sheet": "Rent Roll"
+          },
+          "value": "2026-01-01"
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": 1500,
+          "source": {
+            "cell": "F4",
+            "col": 6,
+            "file": "birch_point.xlsx",
+            "row": 4,
+            "sheet": "Rent Roll"
+          },
+          "value": "1500.00"
+        },
+        "other_charges": {
+          "derived": true,
+          "note": "Sum of this unit's other (non-rent) charge lines.",
+          "raw": null,
+          "source": {
+            "cell": "H5",
+            "col": 8,
+            "file": "birch_point.xlsx",
+            "row": 5,
+            "sheet": "Rent Roll"
+          },
+          "sources": [
+            {
+              "cell": "H5",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 5,
+              "sheet": "Rent Roll"
+            },
+            {
+              "cell": "H6",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 6,
+              "sheet": "Rent Roll"
+            }
+          ],
+          "value": "110.00"
+        },
+        "sqft": {
+          "derived": false,
+          "raw": 700,
+          "source": {
+            "cell": "C4",
+            "col": 3,
+            "file": "birch_point.xlsx",
+            "row": 4,
+            "sheet": "Rent Roll"
+          },
+          "value": 700
+        },
+        "status": {
+          "derived": false,
+          "raw": "Occupied",
+          "source": {
+            "cell": "E4",
+            "col": 5,
+            "file": "birch_point.xlsx",
+            "row": 4,
+            "sheet": "Rent Roll"
+          },
+          "value": "occupied"
+        },
+        "tenant": {
+          "derived": false,
+          "raw": "Chen, Lily",
+          "source": {
+            "cell": "D4",
+            "col": 4,
+            "file": "birch_point.xlsx",
+            "row": 4,
+            "sheet": "Rent Roll"
+          },
+          "value": "Chen, Lily"
+        },
+        "total_charges": {
+          "derived": true,
+          "note": "Sum of all of this unit's charge lines.",
+          "raw": null,
+          "source": {
+            "cell": "H4",
+            "col": 8,
+            "file": "birch_point.xlsx",
+            "row": 4,
+            "sheet": "Rent Roll"
+          },
+          "sources": [
+            {
+              "cell": "H4",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 4,
+              "sheet": "Rent Roll"
+            },
+            {
+              "cell": "H5",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 5,
+              "sheet": "Rent Roll"
+            },
+            {
+              "cell": "H6",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 6,
+              "sheet": "Rent Roll"
+            }
+          ],
+          "value": "1560.00"
+        },
+        "unit": {
+          "derived": false,
+          "raw": "A101",
+          "source": {
+            "cell": "A4",
+            "col": 1,
+            "file": "birch_point.xlsx",
+            "row": 4,
+            "sheet": "Rent Roll"
+          },
+          "value": "A101"
+        },
+        "unit_type": {
+          "derived": false,
+          "raw": "1x1",
+          "source": {
+            "cell": "B4",
+            "col": 2,
+            "file": "birch_point.xlsx",
+            "row": 4,
+            "sheet": "Rent Roll"
+          },
+          "value": "1x1"
+        }
+      },
+      "section": null,
+      "source_row": 4
+    },
+    {
+      "charges": [
+        {
+          "amount": {
+            "derived": false,
+            "raw": 1500,
+            "source": {
+              "cell": "H7",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 7,
+              "sheet": "Rent Roll"
+            },
+            "value": "1500.00"
+          },
+          "category": "rent",
+          "code": {
+            "derived": false,
+            "raw": "RENT",
+            "source": {
+              "cell": "G7",
+              "col": 7,
+              "file": "birch_point.xlsx",
+              "row": 7,
+              "sheet": "Rent Roll"
+            },
+            "value": "RENT"
+          }
+        },
+        {
+          "amount": {
+            "derived": false,
+            "raw": -100,
+            "source": {
+              "cell": "H8",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 8,
+              "sheet": "Rent Roll"
+            },
+            "value": "-100.00"
+          },
+          "category": "concession",
+          "code": {
+            "derived": false,
+            "raw": "CONC",
+            "source": {
+              "cell": "G8",
+              "col": 7,
+              "file": "birch_point.xlsx",
+              "row": 8,
+              "sheet": "Rent Roll"
+            },
+            "value": "CONC"
+          }
+        }
+      ],
+      "fields": {
+        "concessions": {
+          "derived": true,
+          "note": "Sum of this unit's concession charge lines.",
+          "raw": null,
+          "source": {
+            "cell": "H8",
+            "col": 8,
+            "file": "birch_point.xlsx",
+            "row": 8,
+            "sheet": "Rent Roll"
+          },
+          "sources": [
+            {
+              "cell": "H8",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 8,
+              "sheet": "Rent Roll"
+            }
+          ],
+          "value": "-100.00"
+        },
+        "current_rent": {
+          "derived": true,
+          "note": "Sum of this unit's rent charge lines.",
+          "raw": null,
+          "source": {
+            "cell": "H7",
+            "col": 8,
+            "file": "birch_point.xlsx",
+            "row": 7,
+            "sheet": "Rent Roll"
+          },
+          "sources": [
+            {
+              "cell": "H7",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 7,
+              "sheet": "Rent Roll"
+            }
+          ],
+          "value": "1500.00"
+        },
+        "lease_end": {
+          "derived": false,
+          "raw": "2/28/2026",
+          "source": {
+            "cell": "J7",
+            "col": 10,
+            "file": "birch_point.xlsx",
+            "row": 7,
+            "sheet": "Rent Roll"
+          },
+          "value": "2026-02-28"
+        },
+        "lease_start": {
+          "derived": false,
+          "raw": "3/1/2025",
+          "source": {
+            "cell": "I7",
+            "col": 9,
+            "file": "birch_point.xlsx",
+            "row": 7,
+            "sheet": "Rent Roll"
+          },
+          "value": "2025-03-01"
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": 1500,
+          "source": {
+            "cell": "F7",
+            "col": 6,
+            "file": "birch_point.xlsx",
+            "row": 7,
+            "sheet": "Rent Roll"
+          },
+          "value": "1500.00"
+        },
+        "sqft": {
+          "derived": false,
+          "raw": 700,
+          "source": {
+            "cell": "C7",
+            "col": 3,
+            "file": "birch_point.xlsx",
+            "row": 7,
+            "sheet": "Rent Roll"
+          },
+          "value": 700
+        },
+        "status": {
+          "derived": false,
+          "raw": "Occupied-NTV",
+          "source": {
+            "cell": "E7",
+            "col": 5,
+            "file": "birch_point.xlsx",
+            "row": 7,
+            "sheet": "Rent Roll"
+          },
+          "value": "notice"
+        },
+        "tenant": {
+          "derived": false,
+          "raw": "Okafor, Ben",
+          "source": {
+            "cell": "D7",
+            "col": 4,
+            "file": "birch_point.xlsx",
+            "row": 7,
+            "sheet": "Rent Roll"
+          },
+          "value": "Okafor, Ben"
+        },
+        "total_charges": {
+          "derived": true,
+          "note": "Sum of all of this unit's charge lines.",
+          "raw": null,
+          "source": {
+            "cell": "H7",
+            "col": 8,
+            "file": "birch_point.xlsx",
+            "row": 7,
+            "sheet": "Rent Roll"
+          },
+          "sources": [
+            {
+              "cell": "H7",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 7,
+              "sheet": "Rent Roll"
+            },
+            {
+              "cell": "H8",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 8,
+              "sheet": "Rent Roll"
+            }
+          ],
+          "value": "1400.00"
+        },
+        "unit": {
+          "derived": false,
+          "raw": "A102",
+          "source": {
+            "cell": "A7",
+            "col": 1,
+            "file": "birch_point.xlsx",
+            "row": 7,
+            "sheet": "Rent Roll"
+          },
+          "value": "A102"
+        },
+        "unit_type": {
+          "derived": false,
+          "raw": "1x1",
+          "source": {
+            "cell": "B7",
+            "col": 2,
+            "file": "birch_point.xlsx",
+            "row": 7,
+            "sheet": "Rent Roll"
+          },
+          "value": "1x1"
+        }
+      },
+      "section": null,
+      "source_row": 7
+    },
+    {
+      "charges": [],
+      "fields": {
+        "lease_end": {
+          "derived": false,
+          "raw": null,
+          "source": {
+            "cell": "J9",
+            "col": 10,
+            "file": "birch_point.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": null
+        },
+        "lease_start": {
+          "derived": false,
+          "raw": null,
+          "source": {
+            "cell": "I9",
+            "col": 9,
+            "file": "birch_point.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": null
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": 2100,
+          "source": {
+            "cell": "F9",
+            "col": 6,
+            "file": "birch_point.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": "2100.00"
+        },
+        "sqft": {
+          "derived": false,
+          "raw": 1050,
+          "source": {
+            "cell": "C9",
+            "col": 3,
+            "file": "birch_point.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": 1050
+        },
+        "status": {
+          "derived": false,
+          "raw": "Vacant",
+          "source": {
+            "cell": "E9",
+            "col": 5,
+            "file": "birch_point.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": "vacant"
+        },
+        "tenant": {
+          "derived": false,
+          "raw": "VACANT",
+          "source": {
+            "cell": "D9",
+            "col": 4,
+            "file": "birch_point.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": null
+        },
+        "unit": {
+          "derived": false,
+          "raw": "A103",
+          "source": {
+            "cell": "A9",
+            "col": 1,
+            "file": "birch_point.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": "A103"
+        },
+        "unit_type": {
+          "derived": false,
+          "raw": "2x2",
+          "source": {
+            "cell": "B9",
+            "col": 2,
+            "file": "birch_point.xlsx",
+            "row": 9,
+            "sheet": "Rent Roll"
+          },
+          "value": "2x2"
+        }
+      },
+      "section": null,
+      "source_row": 9
+    },
+    {
+      "charges": [
+        {
+          "amount": {
+            "derived": false,
+            "raw": 2050,
+            "source": {
+              "cell": "H10",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 10,
+              "sheet": "Rent Roll"
+            },
+            "value": "2050.00"
+          },
+          "category": "rent",
+          "code": {
+            "derived": false,
+            "raw": "RENT",
+            "source": {
+              "cell": "G10",
+              "col": 7,
+              "file": "birch_point.xlsx",
+              "row": 10,
+              "sheet": "Rent Roll"
+            },
+            "value": "RENT"
+          }
+        }
+      ],
+      "fields": {
+        "current_rent": {
+          "derived": true,
+          "note": "Sum of this unit's rent charge lines.",
+          "raw": null,
+          "source": {
+            "cell": "H10",
+            "col": 8,
+            "file": "birch_point.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "sources": [
+            {
+              "cell": "H10",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 10,
+              "sheet": "Rent Roll"
+            }
+          ],
+          "value": "2050.00"
+        },
+        "lease_end": {
+          "derived": false,
+          "raw": "6/30/2027",
+          "source": {
+            "cell": "J10",
+            "col": 10,
+            "file": "birch_point.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "2027-06-30"
+        },
+        "lease_start": {
+          "derived": false,
+          "raw": "7/1/2026",
+          "source": {
+            "cell": "I10",
+            "col": 9,
+            "file": "birch_point.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "2026-07-01"
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": 2100,
+          "source": {
+            "cell": "F10",
+            "col": 6,
+            "file": "birch_point.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "2100.00"
+        },
+        "sqft": {
+          "derived": false,
+          "raw": 1050,
+          "source": {
+            "cell": "C10",
+            "col": 3,
+            "file": "birch_point.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": 1050
+        },
+        "status": {
+          "derived": false,
+          "raw": "Occupied",
+          "source": {
+            "cell": "E10",
+            "col": 5,
+            "file": "birch_point.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "occupied"
+        },
+        "tenant": {
+          "derived": false,
+          "raw": "Diaz, Rosa",
+          "source": {
+            "cell": "D10",
+            "col": 4,
+            "file": "birch_point.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "Diaz, Rosa"
+        },
+        "total_charges": {
+          "derived": true,
+          "note": "Sum of all of this unit's charge lines.",
+          "raw": null,
+          "source": {
+            "cell": "H10",
+            "col": 8,
+            "file": "birch_point.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "sources": [
+            {
+              "cell": "H10",
+              "col": 8,
+              "file": "birch_point.xlsx",
+              "row": 10,
+              "sheet": "Rent Roll"
+            }
+          ],
+          "value": "2050.00"
+        },
+        "unit": {
+          "derived": false,
+          "raw": "A104",
+          "source": {
+            "cell": "A10",
+            "col": 1,
+            "file": "birch_point.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "A104"
+        },
+        "unit_type": {
+          "derived": false,
+          "raw": "2x2",
+          "source": {
+            "cell": "B10",
+            "col": 2,
+            "file": "birch_point.xlsx",
+            "row": 10,
+            "sheet": "Rent Roll"
+          },
+          "value": "2x2"
+        }
+      },
+      "section": null,
+      "source_row": 10
+    }
+  ],
+  "skipped": {},
+  "source": {
+    "file": "birch_point.xlsx",
+    "header_rows": [
+      3
+    ],
+    "sheet": "Rent Roll",
+    "sheets": [
+      "Rent Roll"
+    ]
+  },
+  "stated_figures": [],
+  "summary": {
+    "acknowledged": 0,
+    "corrections": 0,
+    "errors": 0,
+    "future_leases": 0,
+    "physical_occupancy": 0.75,
+    "status_counts": {
+      "notice": 1,
+      "occupied": 2,
+      "vacant": 1
+    },
+    "total_current_rent": "5000.00",
+    "total_market_rent": "7200.00",
+    "total_sqft": 3500,
+    "units": 4,
+    "warnings": 0
+  },
+  "totals": [
+    {
+      "amounts": {
+        "charge_amount": {
+          "derived": false,
+          "raw": 5010,
+          "source": {
+            "cell": "H11",
+            "col": 8,
+            "file": "birch_point.xlsx",
+            "row": 11,
+            "sheet": "Rent Roll"
+          },
+          "value": "5010.00"
+        },
+        "market_rent": {
+          "derived": false,
+          "raw": 7200,
+          "source": {
+            "cell": "F11",
+            "col": 6,
+            "file": "birch_point.xlsx",
+            "row": 11,
+            "sheet": "Rent Roll"
+          },
+          "value": "7200.00"
+        },
+        "sqft": {
+          "derived": false,
+          "raw": 3500,
+          "source": {
+            "cell": "C11",
+            "col": 3,
+            "file": "birch_point.xlsx",
+            "row": 11,
+            "sheet": "Rent Roll"
+          },
+          "value": 3500
+        }
+      },
+      "computed": {
+        "charge_amount": "5010.00",
+        "market_rent": "7200.00",
+        "sqft": "3500"
+      },
+      "covers_rows": [
+        4,
+        7,
+        9,
+        10
+      ],
+      "label": "Total",
+      "row": 11,
+      "section": null
+    }
+  ]
+}

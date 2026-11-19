@@ -1,0 +1,53 @@
+@import "@fontsource/public-sans/400.css";
+@import "@fontsource/public-sans/500.css";
+@import "@fontsource/public-sans/600.css";
+@import "@fontsource/public-sans/700.css";
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+
+  --color-paper: #f5f7f8;
+  --color-surface: #ffffff;
+  --color-ink: #16202b;
+  --color-ink-2: #4a5866;
+  --color-ink-3: #5f6b77;
+  --color-rule: #d9dfe5;
+  --color-rule-soft: #e9edf1;
+
+  --color-action: #24476b;
+  --color-action-hover: #1b3753;
+
+  --color-tie: #0b6e5a;
+  --color-tie-soft: #e3f3ee;
+  --color-warn: #946010;
+  --color-warn-soft: #fbf1df;
+  --color-err: #b4322a;
+  --color-err-soft: #f9e5e3;
+  --color-derived: #e8eefb;
+  --color-corrected: #fdf0d2;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+}
+
+html {
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+body {
+  @apply bg-paper text-ink font-sans text-base antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
