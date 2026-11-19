@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+base_ref="${1:-origin/main}"
+if git rev-parse --verify -q "$base_ref" >/dev/null; then
+  git merge-base HEAD "$base_ref" || { echo "diff-base: no merge base with $base_ref; use a full clone (fetch-depth: 0)" >&2; exit 2; }
+  exit 0
+fi
+if [ "$base_ref" != origin/main ] || git remote get-url origin >/dev/null 2>&1; then
+  echo "diff-base: cannot resolve $base_ref; use a full clone (fetch-depth: 0)" >&2
+  exit 2
+fi
+if [ -f .unslop/adopt.json ]; then
+  adopted=$(git log --diff-filter=A --format=%H -1 -- .unslop/adopt.json 2>/dev/null || true)
+  if [ -n "$adopted" ]; then
+    echo "$adopted"
+  else
+    git rev-parse HEAD
+  fi
+  exit 0
+fi
+root=$(git rev-list --max-parents=0 HEAD 2>/dev/null | tail -n 1)
+if [ -n "$root" ]; then
+  echo "$root"
+else
+  git hash-object -t tree /dev/null
+fi

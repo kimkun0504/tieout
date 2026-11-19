@@ -1,0 +1,8 @@
+[run]
+branch = true
+data_file = .unslop/out/.coverage
+omit =
+    */.venv/*
+    */site-packages/*
+    .unslop/*
+    tools/guard/*

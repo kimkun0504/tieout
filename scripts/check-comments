@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+command -v uv >/dev/null || { echo "check-comments: uv is required (mise install, or https://docs.astral.sh/uv)" >&2; exit 2; }
+since=()
+[ ! -f .unslop/adopt.json ] || since=(--since "$(scripts/diff-base)")
+git ls-files --cached --others --exclude-standard -z |
+  uv run --quiet --no-project --python 3.13 --with tree-sitter-language-pack==1.25.0 python tools/guard/no_comments.py "${since[@]}" -

@@ -1,0 +1,32 @@
+{
+  "stack": "python",
+  "setup": "uv venv --allow-existing .venv && uv pip install --python .venv -e \".[dev]\" pytest pytest-cov",
+  "format": [
+    {
+      "name": "ruff format",
+      "glob": [
+        "*.py",
+        "*.pyi"
+      ],
+      "run": "uvx ruff@0.17.4 format --stdin-filename {path} -"
+    }
+  ],
+  "checks": [
+    {
+      "name": "ruff",
+      "format": "sarif",
+      "report": ".unslop/out/ruff.sarif",
+      "run": "uvx ruff@0.17.4 check --config .unslop/config/ruff.toml --exit-zero --output-format sarif --output-file .unslop/out/ruff.sarif ."
+    },
+    {
+      "name": "basedpyright",
+      "format": "pyright",
+      "report": ".unslop/out/basedpyright.json",
+      "run": "uvx basedpyright@1.40.2 -p .unslop/config/pyrightconfig.json --outputjson > .unslop/out/basedpyright.json"
+    }
+  ],
+  "tests": {
+    "run": ".venv/bin/python -m pytest -q --cov=src --cov-config=.unslop/config/coveragerc --cov-report=xml:.unslop/out/coverage.xml",
+    "coverage": ".unslop/out/coverage.xml"
+  }
+}

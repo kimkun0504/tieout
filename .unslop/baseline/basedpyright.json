@@ -1,0 +1,22 @@
+{
+  "examples/make_samples.py::reportMissingImports": 1,
+  "examples/make_samples.py::reportUnknownArgumentType": 2,
+  "examples/make_samples.py::reportUnknownVariableType": 2,
+  "src/tieout/ingest.py::reportUnknownMemberType": 1,
+  "src/tieout/ingest.py::reportUnknownVariableType": 1,
+  "src/tieout/mapping.py::reportUnknownMemberType": 2,
+  "src/tieout/mapping.py::reportUnknownVariableType": 1,
+  "src/tieout/pipeline.py::reportUnknownVariableType": 1,
+  "src/tieout/validate.py::reportUnknownMemberType": 15,
+  "src/tieout/validate.py::reportUnknownVariableType": 5,
+  "src/tieout/validate.py::reportUnusedVariable": 1,
+  "tests/conftest.py::reportMissingImports": 1,
+  "tests/conftest.py::reportUnknownVariableType": 4,
+  "tests/samples.py::reportOptionalMemberAccess": 19,
+  "tests/test_pipeline.py::reportMissingParameterType": 19,
+  "tests/test_pipeline.py::reportOptionalMemberAccess": 1,
+  "tests/test_pipeline.py::reportUnknownArgumentType": 19,
+  "tests/test_pipeline.py::reportUnknownMemberType": 3,
+  "tests/test_pipeline.py::reportUnknownParameterType": 20,
+  "tests/test_pipeline.py::reportUnknownVariableType": 2
+}

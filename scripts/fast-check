@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+scripts/check-comments
+scripts/check-diff
+uv run --quiet --no-project --python 3.13 python .unslop/guard/adopted.py check

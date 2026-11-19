@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+uv run --quiet --no-project --python 3.13 python .unslop/guard/adopted.py baseline

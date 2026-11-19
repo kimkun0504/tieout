@@ -1,0 +1,24 @@
+required-version = ">=0.17,<0.18"
+extend-exclude = [".unslop", "tools/guard"]
+
+[lint]
+select = ["ALL"]
+ignore = ["D", "CPY001", "COM812", "ISC001", "E501"]
+
+[lint.mccabe]
+max-complexity = 8
+
+[lint.pylint]
+max-args = 5
+max-branches = 10
+max-returns = 4
+max-statements = 40
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[lint.per-file-ignores]
+"**/tests/**" = ["S101", "PLR2004", "INP001"]
+"**/test_*.py" = ["S101", "PLR2004", "INP001"]
+"**/*_test.py" = ["S101", "PLR2004", "INP001"]
+"**/conftest.py" = ["S101", "INP001"]

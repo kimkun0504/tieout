@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+base=$("$(dirname "$0")/diff-base" "${1:-origin/main}")
+pattern='\.(skip|only|todo|fixme)[.(A-Z]|(^|[^A-Za-z0-9_.])x(it|describe|test)\(|@ts-(ignore|expect-error|nocheck)|eslint-disable|(istanbul|c8|v8) ignore|@Disabled|@Ignore([^A-Za-z]|$)|@Suppress(Warnings|FBWarnings)?\(|NOPMD|CHECKSTYLE:OFF|t\.Skip|nolint|lint:ignore|pytest\.(mark\.)?(skip|xfail)|unittest\.skip|noqa|type: *ignore|pyright: *ignore|pragma: *no cover|atlas:nolint|squawk-ignore|#!?\[(allow|expect|ignore)([]( ]|$)|#!?\[cfg_attr\([^)]*(allow|expect)|#pragma +warning +disable|SuppressMessage(Attribute)?\(|Skip *= *"|markTest(Skipped|Incomplete)|CodeCoverageIgnore|phpstan-ignore|psalm-suppress|infection-ignore|rubocop: *(disable|todo)|steep: *ignore|:nocov:|mutant: *disable|(^|[^A-Za-z0-9_.])[xf](it|describe|context|specify|example)[ (]|(^|[^A-Za-z0-9_.:])(skip|pending)( +["'\'':]|\(|$)|(skip|pending|focus): *true|@(module)?tag +(:skip|skip:)|@dialyzer +\{?:?nowarn|@compile +\{?:?(nowarn|no_warn)|\.disabled\(|withKnownIssue|XCTSkip'
+code=(':(glob)**/*.ts' ':(glob)**/*.tsx' ':(glob)**/*.js' ':(glob)**/*.jsx' ':(glob)**/*.py' ':(glob)**/*.go' ':(glob)**/*.kt' ':(glob)**/*.java' ':(glob)**/*.sql' ':(glob)**/*.rs' ':(glob)**/*.cs' ':(glob)**/*.tf' ':(glob)**/*.php' ':(glob)**/*.rb' ':(glob)**/*.ex' ':(glob)**/*.exs' ':(glob)**/*.swift')
+excluded=(':(exclude)scripts/**' ':(exclude)tools/guard/**' ':(exclude).unslop/**' ':(exclude)eslint-rules/**')
+hits=$(
+  {
+    git diff "$base" -U0 --no-color -- "${code[@]}" "${excluded[@]}" | grep -E '^\+[^+]' || true
+    git ls-files -o --exclude-standard -- "${code[@]}" "${excluded[@]}" | while IFS= read -r f; do [ -f "$f" ] && sed "s|^|+$f: |" "$f"; done
+  } | grep -E -- "$pattern" || true
+)
+if [ -n "$hits" ]; then
+  printf 'check-diff: new skip or suppression found:\n%s\n' "$hits" >&2
+  exit 1
+fi
+tests=('*.test.*' '*.spec.*' '*_test.go' 'test_*.py' '*_test.py' 'src/test/*' '*/src/test/*' '*/__snapshots__/*' 'tests/*' '*/tests/*' 'test/*' '*/test/*' 'spec/*' '*/spec/*' 'Tests/*' '*/Tests/*' '*_spec.rb' '*Test.php' '*Tests.cs' '*Test.cs' '*.tftest.hcl')
+appended_only() {
+  local before
+  before=$(git show "$base:$1" 2>/dev/null | wc -l | tr -d ' ')
+  git diff -U0 --no-color --no-renames "$base" -- "$1" | awk -v end="$before" '
+    /^@@/ {
+      split($2, old, ",")
+      start = substr(old[1], 2) + 0
+      count = (2 in old) ? old[2] + 0 : 1
+      if (count != 0) bad = 1
+      inserting = (start != end)
+      next
+    }
+    /^\+\+\+ / || /^--- / { next }
+    /^\+/ && inserting {
+      line = substr($0, 2)
+      if (line !~ /^[ \t]*$/ && line !~ /^[ \t]*(import |from [^ ]+ import |use |using |require[ (]|require_relative |#include |@testable import |alias |include )/) bad = 1
+    }
+    END { exit bad }
+  '
+}
+tampered=$(git diff --name-only --no-renames --diff-filter=D "$base" -- "${tests[@]}")
+while IFS= read -r file; do
+  [ -n "$file" ] || continue
+  appended_only "$file" || tampered=$(printf '%s\n%s' "$tampered" "$file")
+done < <(git diff --name-only --no-renames --diff-filter=M "$base" -- "${tests[@]}")
+tampered=$(printf '%s\n' "$tampered" | sed '/^$/d')
+if [ -n "$tampered" ]; then
+  printf 'check-diff: existing tests modified or deleted; a human must review:\n%s\n' "$tampered" >&2
+  printf 'check-diff: new tests can go in new files, or be appended after the last line of an existing one along with any new imports\n' >&2
+  [ "${CHECK_DIFF_ALLOW_TEST_CHANGES:-}" = 1 ] || exit 1
+fi
+exit 0
