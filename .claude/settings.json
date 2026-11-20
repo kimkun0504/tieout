@@ -4,7 +4,7 @@
       "source": {
         "source": "github",
         "repo": "kimkun0504/unslop",
-        "ref": "v0.2.0"
+        "ref": "v0.3.1"
       }
     }
   },
@@ -15,7 +15,6 @@
     "deny": [
       "Edit(unslop.toml)",
       "Edit(.unslop/**)",
-      "Edit(.claude/**)",
       "Edit(.github/**)",
       "Edit(CLAUDE.md)",
       "Edit(AGENTS.md)",
@@ -25,7 +24,18 @@
       "Edit(web/package-lock.json)",
       "Edit(web/package.json)",
       "Edit(web/tsconfig.json)",
-      "Edit(web/vite.config.ts)"
+      "Edit(web/vite.config.ts)",
+      "Edit(.mcp.json)",
+      "Edit(.claude/settings.json)",
+      "Edit(.claude/settings.local.json)",
+      "Edit(.claude/CLAUDE.md)",
+      "Edit(.claude/rules/**)",
+      "Edit(.claude/skills/**)",
+      "Edit(.claude/commands/**)",
+      "Edit(.claude/agents/**)",
+      "Edit(.claude/output-styles/**)",
+      "Edit(.claude/workflows/**)",
+      "Edit(.claude/hooks/**)"
     ]
   },
   "sandbox": {
@@ -33,7 +43,6 @@
       "denyWrite": [
         "./unslop.toml",
         "./.unslop",
-        "./.claude",
         "./.github",
         "./CLAUDE.md",
         "./AGENTS.md",
@@ -43,7 +52,18 @@
         "./web/package-lock.json",
         "./web/package.json",
         "./web/tsconfig.json",
-        "./web/vite.config.ts"
+        "./web/vite.config.ts",
+        "./.mcp.json",
+        "./.claude/settings.json",
+        "./.claude/settings.local.json",
+        "./.claude/CLAUDE.md",
+        "./.claude/rules",
+        "./.claude/skills",
+        "./.claude/commands",
+        "./.claude/agents",
+        "./.claude/output-styles",
+        "./.claude/workflows",
+        "./.claude/hooks"
       ]
     }
   }

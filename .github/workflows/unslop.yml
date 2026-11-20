@@ -1,6 +1,7 @@
 name: unslop
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
 permissions:
@@ -17,4 +18,4 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: kimkun0504/unslop@5ae259f747d34f73991a6a7032c89a085c3d8fc8
+      - uses: kimkun0504/unslop@9aba9b0bce43b0a3fda5b2d53c1074f8b86e453e
