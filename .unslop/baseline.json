@@ -415,5 +415,13 @@
     "tests/test_t12.py::PLC0415": 3,
     "tests/test_t12.py::PT006": 2,
     "tests/test_t12.py::PT018": 6
+  },
+  "web:eslint": {},
+  "web:tsc": {
+    "web/src/components/AuditLog.tsx::TS4111": 10,
+    "web/src/components/Metrics.tsx::TS2322": 2,
+    "web/src/components/StackingPlan.tsx::TS4111": 4,
+    "web/src/components/UnitsTable.tsx::TS4111": 4,
+    "web/src/lib/selection.ts::TS4111": 1
   }
 }

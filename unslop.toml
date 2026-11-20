@@ -1,3 +1,10 @@
-version = "0.1.0"
-profile = "python"
+version = "0.2.0"
 fast_check_seconds = 240
+
+[[stack]]
+profile = "python"
+path = "."
+
+[[stack]]
+profile = "typescript"
+path = "web"

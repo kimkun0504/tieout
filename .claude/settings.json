@@ -4,7 +4,7 @@
       "source": {
         "source": "github",
         "repo": "kimkun0504/unslop",
-        "ref": "v0.1.0"
+        "ref": "v0.2.0"
       }
     }
   },
@@ -21,8 +21,11 @@
       "Edit(AGENTS.md)",
       "Edit(Dockerfile)",
       "Edit(pyproject.toml)",
+      "Edit(web/eslint.config.js)",
+      "Edit(web/package-lock.json)",
       "Edit(web/package.json)",
-      "Edit(web/tsconfig.json)"
+      "Edit(web/tsconfig.json)",
+      "Edit(web/vite.config.ts)"
     ]
   },
   "sandbox": {
@@ -36,8 +39,11 @@
         "./AGENTS.md",
         "./Dockerfile",
         "./pyproject.toml",
+        "./web/eslint.config.js",
+        "./web/package-lock.json",
         "./web/package.json",
-        "./web/tsconfig.json"
+        "./web/tsconfig.json",
+        "./web/vite.config.ts"
       ]
     }
   }
