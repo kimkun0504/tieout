@@ -1,0 +1,70 @@
+{
+  "extraKnownMarketplaces": {
+    "unslop": {
+      "source": {
+        "source": "github",
+        "repo": "kimkun0504/unslop",
+        "ref": "v0.3.1"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "unslop@unslop": true
+  },
+  "permissions": {
+    "deny": [
+      "Edit(unslop.toml)",
+      "Edit(.unslop/**)",
+      "Edit(.github/**)",
+      "Edit(CLAUDE.md)",
+      "Edit(AGENTS.md)",
+      "Edit(Dockerfile)",
+      "Edit(pyproject.toml)",
+      "Edit(web/eslint.config.js)",
+      "Edit(web/package-lock.json)",
+      "Edit(web/package.json)",
+      "Edit(web/tsconfig.json)",
+      "Edit(web/vite.config.ts)",
+      "Edit(.mcp.json)",
+      "Edit(.claude/settings.json)",
+      "Edit(.claude/settings.local.json)",
+      "Edit(.claude/CLAUDE.md)",
+      "Edit(.claude/rules/**)",
+      "Edit(.claude/skills/**)",
+      "Edit(.claude/commands/**)",
+      "Edit(.claude/agents/**)",
+      "Edit(.claude/output-styles/**)",
+      "Edit(.claude/workflows/**)",
+      "Edit(.claude/hooks/**)"
+    ]
+  },
+  "sandbox": {
+    "filesystem": {
+      "denyWrite": [
+        "./unslop.toml",
+        "./.unslop",
+        "./.github",
+        "./CLAUDE.md",
+        "./AGENTS.md",
+        "./Dockerfile",
+        "./pyproject.toml",
+        "./web/eslint.config.js",
+        "./web/package-lock.json",
+        "./web/package.json",
+        "./web/tsconfig.json",
+        "./web/vite.config.ts",
+        "./.mcp.json",
+        "./.claude/settings.json",
+        "./.claude/settings.local.json",
+        "./.claude/CLAUDE.md",
+        "./.claude/rules",
+        "./.claude/skills",
+        "./.claude/commands",
+        "./.claude/agents",
+        "./.claude/output-styles",
+        "./.claude/workflows",
+        "./.claude/hooks"
+      ]
+    }
+  }
+}
